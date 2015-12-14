@@ -35,7 +35,8 @@ init =
     -- , decoderStr = "\"outer\" := (\"inner\" := string)"
     -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"simon\" := string)\n\t(\"test\" := string)"
     -- , decoderStr = "f1 = at \n\t[\"outer\"] \n\t(object1 dummy (\"inner\" := string))"
-    , decoderStr = "f1 = \"inner\" := string\nf2 = \"outer\" := f1"
+    -- , decoderStr = "f1 s = s := string\nf2 = \"outer\" := f1 \"inner\""
+    , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 string"
     -- , decoderStr = "f1 = \"array\" := (list int)"
     -- , decoderStr = "func = \"array\" := (tuple2 (\\a b -> [a,b]) int int)"
     -- , decoderStr = "func = tuple5 comb int int int int int"
@@ -145,8 +146,9 @@ navbar =
         , p []
             [ text "Simon Hampton ("
             , a
-                [ href "https://github.com/simonh1000/json-interpreter" ]
-                [ text "Source : github" ]
+                [ href "https://github.com/simonh1000/json-interpreter"
+                , style [ ("color", "inherit")]]
+                [ text "Source: github" ]
             , text ")"
             ]
         ]
@@ -168,7 +170,7 @@ mainSection address model =
                 , onchange address Decoder
                 ]
                 [ text model.decoderStr ]
-            , p [] [ text "Sorry: I cannot yet parse <| or |>, nor functions with parameters, and tuple does not check array length"]
+            , p [] [ text "Sorry: I cannot yet parse <| or |>, and nor does tuple check array length"]
             ]
         , div
             [ containerStyle elmPale elmGrey ]
@@ -191,13 +193,16 @@ parseResult address model =
             ] <|
             [ h3
                 [ style [("margin", "0")] ]
-                [ text "Choose entry point" ]
-            ]
-            ++  (List.map (decoderButton address) model.ast)
-            ++  [ span
-                    [ style [("font-size", "10px")]]
-                    [ text <| toString model.ast ]
+                [ --text ""
+                text "Choose entry point"
                 ]
+            , div []
+                (List.map (decoderButton address) model.ast)
+            , div
+                [ style [("font-size", "10px")]
+                ]
+                [ text <| toString model.ast ]
+            ]
     else
         div
             [ if model.errorMessage /= ""
@@ -211,7 +216,7 @@ decoderButton address func =
     let n =
         case func of
             Proc name _ _ -> name
-            otherwise -> "Default"
+            otherwise -> "!!!!!"
     in
         span
             [ onClick address (ChooseDecoder n)
@@ -307,16 +312,17 @@ footerStyles c =
         , ("flex-basis", "0")
         , ("padding", "15px")
         , ("display", "flex")
+        , ("flex-wrap", "wrap")
         , ("align-items", "center")
         ]
 
 fakeButton =
     style
         [ ("background-color", elmBlue )
-        , ("padding", "5px 15px")
+        , ("padding", "5px 12px")
         , ("cursor", "pointer")
         , ("display", "inline-block")
-        , ("margin", "0 15px")
+        , ("margin", "0 10px 5px 10px")
         , ("border-radius", "5px")
         ]
 

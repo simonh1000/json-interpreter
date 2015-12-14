@@ -7,6 +7,8 @@ import Combine.Infix exposing (..)
 import String
 import Json.Decode as Json exposing (Decoder, Value, (:=))
 
+import AST exposing (..)
+
 -- list delimiters
 delimiters = [',', ']', ')', '"']
 
@@ -32,21 +34,39 @@ possibleSpacing =
         oneOf spacingChars
 
 -- WORDS
+-- word : Parser String
+-- word =
+--     regex "[a-zA-Z_\\d\\.\\$]+"
+
+-- 1 or more letter, numbers, . $
 word : Parser String
 word =
     regex "[a-zA-Z_\\d\\.\\$]+"
-    -- map String.fromList <| many1 (noneOf <| spaceChars ++ delimiters)
 
-stringLiteral : Parser String
+-- variable/  function names
+var : Parser Command
+var =
+    word
+    `andThen` \w -> succeed <| Call w []
+
+-- stringLiteral : Parser String
+-- stringLiteral =
+--     between (char '"') (char '"')
+--         word
+
+quotedWord : Parser String
+quotedWord =
+    between (char '"') (char '"') word
+
+stringLiteral : Parser Command
 stringLiteral =
-    between (char '"') (char '"')
-        word
-        -- <| Combine.map String.fromList <| many (noneOf ['"'])
+    between (char '"') (char '"') word
+    `andThen` (succeed << Str)
 
-wordOrBrackets : Parser String
-wordOrBrackets =
-    word `or`
-        map String.fromList (between openBrackets closeBrackets (many <| noneOf [')']))
+-- wordOrBrackets : Parser String
+-- wordOrBrackets =
+--     word `or`
+--         map String.fromList (between openBrackets closeBrackets (many <| noneOf [')']))
 
 -- BRACKETS
 -- parse brackets first, accept some space just inside brackets
@@ -62,11 +82,22 @@ closeBrackets : Parser ()
 closeBrackets =
     possibleSpacing <* (char ')')
 
---
+-- used to transform output of decoder
+-- irrelevant for this project
+transformFunc : Parser String
+transformFunc =
+    -- between openBrackets closeBrackets <|
+    bracketed <|
+        word <* many (spaces <* (word `or` quotedWord))
+
+-- NEEDS more work
 anonFunc : Parser String
 anonFunc =
+    let
+        pre = string "(" <* possSpaces <* string "\\"
     -- regex "\\(\\[^\\)]*\\)"
-    map String.fromList <| between (char '(') (char ')') (many1 <| noneOf [')'])
+    in
+    map String.fromList <| between pre (char ')') (many1 <| noneOf [')'])
     -- between openBrackets closeBrackets (char '\' )
 
 listOf : Parser a -> Parser (List a)
