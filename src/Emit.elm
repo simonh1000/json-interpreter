@@ -70,6 +70,27 @@ emit env com =
                 |> Json.map (Array.foldr (++) "")
         -- tuple2:  (String -> String -> value) -> Decoder String -> Decoder String -> Decoder String
         Tuple coms ->
+            list value
+            `andThen` \vs ->
+                if length vs == length coms
+                    then
+                        (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
+                        `andThen` Json.succeed
+                        -- emit env (Object <| map toString coms)
+                        -- maybe (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
+                        -- `andThen` \res ->
+                        --     case res of
+                        --         Nothing ->
+                        --             fail <| "An error occured decoding with tuple" ++ (toString <| length coms)
+                        --         Just ans -> Json.succeed ans
+                            -- case res of
+                            --     Nothing ->
+                            --         fail <| "An error occured decoding with tuple" ++ (toString <| length coms)
+                            --     Just ans -> Json.succeed ans
+                    else fail <|
+                        "Array has wrong length: had " ++
+                        toString (length vs) ++ " elements vs expected " ++
+                        toString (length coms)
         --     -- let f a b = a
         --     -- in
         --     -- case coms of
@@ -83,12 +104,6 @@ emit env com =
         --     --     [c1, c2, c3, c4, c5] ->
         --     --         tuple5 (\a _ _ _ _->a) (emit env c1) (emit env c2) (emit env c3) (emit env c4) (emit env c5)
         --
-            maybe (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
-            `andThen` \res ->
-                case res of
-                    Nothing ->
-                        fail <| "An error occured decoding with tuple" ++ (toString <| length coms)
-                    Just ans -> Json.succeed ans
         Map com -> emit env com
         Succeed _ -> Json.succeed "succeed"
         MaybeCommand -> Json.succeed "maybe"
@@ -120,42 +135,22 @@ zip l1 l2 =
     case (l1,l2) of
         (l::ls, k::ks) -> (l,k) :: zip ls ks
         otherwise -> []
-{-
-f1 s = s := string
-f2 = "outer" := f1 "inner"
+{-}
+tuple5
+    :  (a -> b -> c -> d -> e -> value)
+    -> Decoder a
+    -> Decoder b
+    -> Decoder c
+    -> Decoder d
+    -> Decoder e
+    -> Decoder value
 
-f1 s = "inner" := s
-f2 = "outer" := f1 string
+object5
+    :  (a -> b -> c -> d -> e -> value)
+    -> Decoder a
+    -> Decoder b
+    -> Decoder c
+    -> Decoder d
+    -> Decoder e
+    -> Decoder value
 -}
-
-                    -- oneOf
-                    --     [ (emit env <| Object <| List.indexedMap (\i com -> KV (toString i) com) coms)
-                    --     , fail "Tuple error"
-                    --     ]
-                    -- Need a Decoder String
-                    -- that checks 3 values
-                    -- and that each is of right type
-                    -- tuple2 f (emit env c1) (tuple2 f (emit env c2) (tuple2 f (emit env c3) (succeed "tup:")))
-                    -- tuple2 f (emit env c1)
-                    -- `andMap` (tuple2 f (emit env c2)
-                    -- `andMap` tuple2 f (emit env c3) (succeed "tup: "))
-                -- otherwise -> fail "tuple"
-
-
--- decodeString (Json.Decode.Decoder a) String
-
-                    -- \lst ->
-                    --     case lst of
-                    --         (a::b::c::[]) ->
-                    --             tuple2 f (emit env c3) <|
-                    --             tuple2 f (emit env c1) (emit env c2)
-                    --         otherwise -> fail "tuple3 error"
-                    -- tuple3 (\a b c->a++b++c) (emit env c1) (emit env c2) (emit env c3)
-            -- let
-            --     go : Command -> Json.Decoder String -> Json.Decoder String
-            --     go com acc =
-            --         tuple2 (\a b -> b ++ ", " ++ a) (emit env com) acc
-            -- in  List.foldr go (succeed "tup: ") coms
-                --     -- Json.decodeString (tuple2 f (emit env c1) (emit env c2)) (take 2 lst)
-                --     -- `andThen`
-                --     \lst ->
