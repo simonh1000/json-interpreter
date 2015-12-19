@@ -23,6 +23,7 @@ emit env com =
                 (List.head <| List.filter (filt n) env)
     in
     case com of
+        -- Str s -> succeed s
         Strng -> string
         Itg -> Json.map toString int
         Flt -> Json.map toString float
@@ -37,30 +38,28 @@ emit env com =
                         otherwise -> fail <| "KV: can't call " ++ p
                 otherwise ->
                     fail <| "KV: odd key " ++ toString key
-                -- P p ->
-                --     case lookup p of
-                --         Var _ p' ->
-                --             emit env <| KV p' value
-                --         otherwise -> fail <| "KV: can't lookup " ++ toString key
-                    -- emit env <| KV (emit env key) value
+        At lst dec ->
+            let stringify s =
+                case s of
+                    Str s' -> s'
+                    otherwise -> "fail"
+                    -- Call name _ ->
+                    --     case lookup name of
+                    --         Var vname vcom ->
+                    --             vcom
+                    --         otherwise ->
+                    --             Json.fail ("Call loop failed for " ++ name)
+            in  at (List.map stringify lst) (emit env dec)
+            -- let stringify s =
+            --     case s of
+            --         Str s' -> s'
+            --         otherwise -> decodeString (emit env s) "fail"
         Object coms ->
             let
                 go : Command -> Json.Decoder String -> Json.Decoder String
                 go com acc =
                     object2 (\a b -> b ++ ", " ++ a) (emit env com) acc
             in  List.foldr go (succeed "obj: ") coms
-        -- At lst com ->
-        --     let
-        --         go l =
-        --             case l of
-        --                 Str l -> l
-        --                 otherwise ->
-        --                     case lookup l of
-        --                         Var _ l' -> l'
-        --                         otherwise -> "At: lookup failure"
-        --         lst' = map go lst
-        --     in
-        --         at lst' (emit env com)
 
         List com ->
             list (emit env com)
@@ -76,43 +75,26 @@ emit env com =
                     then
                         (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
                         `andThen` Json.succeed
-                        -- emit env (Object <| map toString coms)
-                        -- maybe (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
-                        -- `andThen` \res ->
-                        --     case res of
-                        --         Nothing ->
-                        --             fail <| "An error occured decoding with tuple" ++ (toString <| length coms)
-                        --         Just ans -> Json.succeed ans
-                            -- case res of
-                            --     Nothing ->
-                            --         fail <| "An error occured decoding with tuple" ++ (toString <| length coms)
-                            --     Just ans -> Json.succeed ans
                     else fail <|
                         "Array has wrong length: had " ++
                         toString (length vs) ++ " elements vs expected " ++
                         toString (length coms)
-        --     -- let f a b = a
-        --     -- in
-        --     -- case coms of
-        --     --     [c1] -> tuple1 identity (emit env c1)
-        --     --     [c1, c2] ->
-        --     --         tuple2 f (emit env c1) (emit env c2)     -- Decoder String
-        --     --     [c1, c2, c3] ->
-        --     --         tuple3 (\a _ _->a) (emit env c1) (emit env c2) (emit env c3)
-        --     --     [c1, c2, c3, c4] ->
-        --     --         tuple4 (\a _ _ _->a) (emit env c1) (emit env c2) (emit env c3) (emit env c4)
-        --     --     [c1, c2, c3, c4, c5] ->
-        --     --         tuple5 (\a _ _ _ _->a) (emit env c1) (emit env c2) (emit env c3) (emit env c4) (emit env c5)
-        --
         Map com -> emit env com
         Succeed _ -> Json.succeed "succeed"
         MaybeCommand -> Json.succeed "maybe"
         KeyValuePairs -> Json.succeed "keyValuePairs"
+        -- [Proc "shape" [] (AndThen (KV (Str "tag") Strng) (Proc "andthen" [] (Call "shapeInfo" [])))]
+        AndThen com1 com2 ->
+            emit env com1
+            `andThen` \v -> Json.succeed (toString v)
+                -- let env' = (Proc ______) :: env
+                -- in emit env' Call "andThen" [v]
         -- Proc
         Call name params ->
             case lookup name of
                 Proc pname pargs pcom ->
                     let
+                        -- map proc's args to the passed params
                         env' =
                             List.foldl
                                 (\(p, a) acc -> Var p a :: acc)

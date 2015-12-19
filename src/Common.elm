@@ -72,7 +72,15 @@ stringLiteral =
 -- parse brackets first, accept some space just inside brackets
 bracketed : Parser a -> Parser a
 bracketed parser =
-    between openBrackets closeBrackets parser `or` parser
+    choice
+        [ delimiter parser
+        , between openBrackets closeBrackets parser
+        , parser
+        ]
+
+delimiter : Parser a -> Parser a
+delimiter parser =
+    string "<|" *> spacing *> parser
 
 openBrackets : Parser ()
 openBrackets =

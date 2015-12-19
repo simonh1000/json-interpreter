@@ -23,7 +23,7 @@ type Command
     | Custom Command      -- ignore the subsequent transformation
     | Map Command
     | OneOf (List Command)
-    -- | AndThen Command     -- Decoder a
+    | AndThen Command Command      -- second Command will be a Proc
     | Succeed Command
     | MaybeCommand   -- no need to do anything here
     | KeyValuePairs

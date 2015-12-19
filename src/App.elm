@@ -27,18 +27,17 @@ type alias Model =
 
 init =
     -- { json = "{\"simon\": \"Success!!!\"}"
-    -- { json = "{\"simon\": \"Success!!\", \"test\": \"Unbelievable\"}"
-    -- { json = "{\"outer\": {\"inner\": \"Success\"}}"
-    { json = "{\"array\": [4,5,6,7,8]}"
+    { json = "{\"outer\": {\"inner\": \"Success\"}}"
+    -- { json = "{\"array\": [4,5,6,7,8]}"
     -- { json = "[1,2,3,4,5]"
     -- , decoderStr = "f1 = (\"simon\" := string)"
-    -- , decoderStr = "\"outer\" := (\"inner\" := string)"
+    -- , decoderStr = "\"outer\" := <| \"inner\" := string"
     -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"simon\" := string)\n\t(\"test\" := string)"
-    -- , decoderStr = "f1 = at \n\t[\"outer\"] \n\t(object1 dummy (\"inner\" := string))"
+    , decoderStr = "f1 = at \n\t[\"outer\"] <|\n\t\"inner\" := string"
     -- , decoderStr = "f1 s = s := string\nf2 = \"outer\" := f1 \"inner\""
     -- , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 string"
     -- , decoderStr = "f1 = \"array\" := (list int)"
-    , decoderStr = "func = \"array\" :=\n\t\ttuple5\n\t\t\t(\\a b c d e -> [a,b,c,d,e])\n\t\t\tint int int int string"
+    -- , decoderStr = "func = \"array\" :=\n\t\ttuple5\n\t\t\t(\\a b c d e -> [a,b,c,d,e])\n\t\t\tint int int int string"
     -- , decoderStr = "func = tuple5 comb int int int int int"
     , result = ""
     , ast = []
@@ -170,7 +169,7 @@ mainSection address model =
                 , onchange address Decoder
                 ]
                 [ text model.decoderStr ]
-            , p [] [ text "Sorry: I cannot yet parse <| or |>, nor `andThen`"]
+            , p [] [ text "Sorry: I cannot yet parse |>, nor the second part of `andThen`s. Some functions are also hard."]
             ]
         , div
             [ containerStyle elmPale elmGrey ]

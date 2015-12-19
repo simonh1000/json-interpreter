@@ -65,7 +65,32 @@ pCommand =
         rec <| \() ->
             choice
                 [ pProblem
-                -- , pAndThen      -- needs to precede primitives
+                , pAndThen      -- needs to precede primitives
+                , pString
+                , pInt
+                , pFlt
+                , pBln
+                , pKV
+                , pAt
+                , pObject
+                , pList
+                , pArr
+                , pTuple
+                , pSucceed
+                , pMap
+                , pOneOf
+                , pMaybe
+                , pCustom
+                , pKeyValuePairs
+                , pStr
+                , pCall
+                ]
+pCommand' : Parser Command
+pCommand' =
+    bracketed <|
+        rec <| \() ->
+            choice
+                [ pProblem
                 , pString
                 , pInt
                 , pFlt
@@ -154,8 +179,30 @@ pTuple =
     `andThen` (succeed << Tuple)
 
 -- 11 ANDTHEN
--- pAndThen : Parser Command
--- pAndThen =
+-- string `andThen` test
+pAndThen : Parser Command
+pAndThen =
+    let ans =
+        -- pCommand' <* spacing <* string "`andThen`" <* spacing
+        before <* string "`andThen`" <* spacing
+        -- `andThen` \dec1 -> pCommand
+        `andThen` \str -> pCommand
+        `andThen` \dec2 ->
+            case str of
+                Str str ->
+                    case parse pCommand' str of
+                        (Done dec1, cntx) ->
+                            succeed <| AndThen dec1 (Proc "andthen" [] dec2)
+                        (Fail e, cntx) ->
+                            fail <| "andThen" :: e
+                _ -> fail ["andThen", toString str]
+
+    in ans
+
+before : Parser Command
+before =
+    C.map (Str << String.fromList) <| many (noneOf ['`', '\n'])
+    -- in C.map (\y -> Call "def " [y]) x
 --     -- (....) or var
 --     -- bracketed (many1 <| noneOf [')'])
 --     varOrBrackets
