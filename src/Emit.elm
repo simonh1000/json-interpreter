@@ -51,8 +51,8 @@ emit env com =
             let
                 go : Command -> Json.Decoder String -> Json.Decoder String
                 go com acc =
-                    object2 (\a b -> b ++ ", " ++ a) (emit env com) acc
-            in  List.foldr go (succeed "obj: ") coms
+                    object2 (\a b -> b ++ "{k0: " ++ a ++ "}") (emit env com) acc
+            in  List.foldr go (succeed "Con: ") coms
 
         List com ->
             list (emit env com)
@@ -67,20 +67,24 @@ emit env com =
                 if length vs == length coms
                     then
                         (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
-                        `andThen` Json.succeed
+                        `andThen` succeed
                     else fail <|
                         "Array has wrong length: had " ++
                         toString (length vs) ++ " elements vs expected " ++
                         toString (length coms)
         Map com -> emit env com
-        Succeed _ -> Json.succeed "succeed"
-        MaybeCommand -> Json.succeed "maybe"
-        KeyValuePairs -> Json.succeed "keyValuePairs"
+        Succeed s ->
+            case eval s of
+                Just s' -> succeed s'
+                Nothing -> fail <| "could not eval " ++ toString s
+        MaybeCommand -> succeed "maybe"
+        KeyValuePairs -> succeed "keyValuePairs"
+        OneOf lst -> oneOf <| List.map (emit env) lst
 
         -- Only test com1
         AndThen com1 com2 ->
             emit env com1
-            `andThen` \v -> Json.succeed (toString v)
+            `andThen` \v -> succeed (toString v)
                 -- let env' = (Proc ______) :: env
                 -- in emit env' Call "andThen" [v]
         -- Proc
@@ -101,7 +105,7 @@ emit env com =
                     Json.fail ("Call loop failed for " ++ name)
 
         Error e -> Json.fail e
-        otherwise -> Json.succeed "Whoops - missing something in emit"
+        otherwise -> Json.fail <| "Whoops - emit can't yet handle " ++ toString com
 
 andMap : Decoder (a -> b) -> Decoder a -> Decoder b
 andMap decFun decA =

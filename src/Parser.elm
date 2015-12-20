@@ -58,63 +58,47 @@ parseFunctionSignature =
         skip <| var <* between possibleSpacing spacing (char ':') <* many (noneOf ['\n']) *> spacing
 
 -- C O M M A N D S
+commands =
+    bracketed <|
+        rec <| \() ->
+            choice
+                [ pProblem
+                , pString
+                , pInt
+                , pFlt
+                , pBln
+                , pKV
+                , pAt
+                , pObject
+                , pList
+                , pArr
+                , pTuple
+                , pSucceed
+                , pDict
+                , pMap
+                , pOneOf
+                , pMaybe
+                , pCustom
+                , pKeyValuePairs
+                , pStr
+                , pCall
+                ]
 
 pCommand : Parser Command
 pCommand =
-    bracketed <|
-        rec <| \() ->
-            choice
-                [ pProblem
-                , pAndThen      -- needs to precede primitives
-                , pString
-                , pInt
-                , pFlt
-                , pBln
-                , pKV
-                , pAt
-                , pObject
-                , pList
-                , pArr
-                , pTuple
-                , pSucceed
-                , pMap
-                , pOneOf
-                , pMaybe
-                , pCustom
-                , pKeyValuePairs
-                , pStr
-                , pCall
-                ]
+    commands
+    -- (bracketed <| rec <| \() -> pAndThen)
+    -- `or` commands
+
 pCommand' : Parser Command
 pCommand' =
-    bracketed <|
-        rec <| \() ->
-            choice
-                [ pProblem
-                , pString
-                , pInt
-                , pFlt
-                , pBln
-                , pKV
-                , pAt
-                , pObject
-                , pList
-                , pArr
-                , pTuple
-                , pSucceed
-                , pMap
-                , pOneOf
-                , pMaybe
-                , pCustom
-                , pKeyValuePairs
-                , pStr
-                , pCall
-                ]
+    commands
+
 -- 0 NO <|
 pProblem : Parser Command
 pProblem =
-    choice [ string "<|", string "|>" ]
-    `andThen` \_ -> fail ["I can't yet handle <| or |>"]
+    string "|>"
+    `andThen` \_ -> fail ["I can't yet handle |>"]
 
 pStr : Parser Command
 pStr =
@@ -163,13 +147,20 @@ pObject =
 -- -- 8 LIST / ARRAY
 pList : Parser Command
 pList =
-    string "list" *> spacing *> bracketed pCommand
-    `andThen` \dec -> succeed <| List dec
+    -- pStructure "list" List
+    string "list" *> spacing *> pCommand
+    `andThen` (succeed << List)
 
 pArr : Parser Command
 pArr =
-    string "array" *> spacing *> bracketed pCommand
-    `andThen` (succeed << Arr)
+    pStructure "array" Arr
+    -- string "array" *> spacing *> pCommand
+    -- `andThen` (succeed << Arr)
+
+pStructure : String -> (Command -> Command) -> Parser Command
+pStructure typ cnstrctr =
+    string typ *> spacing *> pCommand
+    `andThen` (succeed << cnstrctr)
 
 -- 10 TUPLE
 pTuple : Parser Command
@@ -213,20 +204,28 @@ before =
 --                 (Done com, _) -> (succeed << AndThen) com
 --                 (Fail m, _) -> (succeed << AndThen) (Error <| toString m)
 
--- 12 SUCCEED
--- succeed : a -> Decoder a
--- for some reason this interferes with Call
-pSucceed : Parser Command
-pSucceed =
-    string "succeed" *> spacing *> (stringLiteral `or` var)
-    `andThen` (succeed << Succeed)
-
--- 13 MAP
+-- MAP
 pMap : Parser Command
 pMap =
     -- string "map" *> spacing *> (var `or` anonFunc) *> spacing *> pCommand
     string "map" *> spacing *> (transformFunc `or` anonFunc) *> spacing *> pCommand
     `andThen` (succeed << Map)
+
+-- SUCCEED
+-- succeed : a -> Decoder a
+-- ************* TOO NARROW *************************
+pSucceed : Parser Command
+pSucceed =
+    -- string "succeed" *> spacing *> (stringLiteral `or` var)
+    string "succeed" *> spacing *> stringLiteral
+    `andThen` (succeed << Succeed)
+
+-- fail : String -> Decoder a
+-- ***** TOO NARROW ***** string could also be a passed parameter of a function
+-- pFail : Parser Command
+-- pFail =
+--     string "fail" *> spacing *> stringLiteral
+--     `andThen` (succeed << DFail)
 
 -- 14 ONEOF
 pOneOf : Parser Command
@@ -254,6 +253,12 @@ pKeyValuePairs : Parser Command
 pKeyValuePairs =
     string "keyValuePairs" <* spacing <* pCommand
     `andThen` \_ -> succeed KeyValuePairs
+
+pDict : Parser Command
+pDict =
+    -- pStructure "dict" Dict
+    string "dict" *> spacing *> pCommand
+    `andThen` (succeed << Dict)
 
 -- CALL
 pCall : Parser Command

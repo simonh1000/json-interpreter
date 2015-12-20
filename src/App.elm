@@ -12,7 +12,7 @@ import Json.Decode as Json
 import Parser exposing (parseString)
 import AST exposing (Command(..))
 import Emit exposing (..)
-import Overlay exposing (elmBlue)
+import Overlay
 
 -- MODEL
 
@@ -28,6 +28,7 @@ type alias Model =
     }
 
 init =
+    -- { json = "", decoderStr = ""
     -- { json = "{\"simon\": \"Success!!!\"}"
     { json = "{\"outer\": {\"inner\": \"Success\"}}"
     -- { json = "{\"array\": [4,5,6,7,8]}"
@@ -36,9 +37,9 @@ init =
     -- , decoderStr = "\"outer\" := <| \"inner\" := string"
     -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"simon\" := string)\n\t(\"test\" := string)"
     -- , decoderStr = "f1 = at \n\t[\"outer\", \"inner\"] <|\n\t\toneOf [string, int]"
-    , decoderStr = "f1 = object1 blah <| \"outer\" := (object1 blahblah <| \"inner\" := string)"
+    -- , decoderStr = "f1 = object1 blah <| \"outer\" := (object1 blahblah <| \"inner\" := string)"
     -- , decoderStr = "f1 s = at [\"outer\", s] string\nf2 = f1 \"inner\""
-    -- , decoderStr = "f1 o d = at [o] (\"inner\" := d)\nf2 = f1 \"outer\" string"
+    , decoderStr = "f1 o d = at [o] (\"inner\" := d)\nf2 = f1 \"outer\" string"
     -- , decoderStr = "f1 s = s := string\nf2 = \"outer\" := f1 \"inner\""
     -- , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 string"
     -- , decoderStr = "f1 = \"array\" := (list int)"
@@ -130,7 +131,7 @@ view address model =
         ]
         [ navbar
         -- , overlay address model.overlay
-        , Overlay.view (Signal.forwardTo address OverlayAction) model.overlay
+        -- , Overlay.view (Signal.forwardTo address OverlayAction) model.overlay
         , mainSection address model
         , footer
             [ style
@@ -263,7 +264,7 @@ escapeText str =
         (String.toList str)
 
 -- STYLES
-
+elmBlue = "#60B5CC"
 elmGreen = "#7fd13b"
 elmGrey = "#293C4B"   -- "rgb(41, 60, 75)"
 elmPale = "#f7f7f7"

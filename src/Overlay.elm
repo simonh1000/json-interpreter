@@ -15,7 +15,8 @@ content =
     Markdown.toHtml """
 ## Test your Json decode statements
 
-I cannot yet parse `|>`, `null` nor the second part of `andThen`s.
+I cannot yet parse `|>`, `null` nor `andThen`.
+
 """
 
 view address m =

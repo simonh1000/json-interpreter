@@ -14,24 +14,26 @@ type Command
     | Itg
     | Flt
     | Bln
-    | KV Command Command
-    | Object (List Command)
-    | At (List Command) Command
+    -- | Null ...
     | List Command
     | Arr Command
     | Tuple (List Command)
-    | Custom Command      -- ignore the subsequent transformation
-    | Map Command
-    | OneOf (List Command)
-    | AndThen Command Command      -- second Command will be a Proc
-    | Succeed Command
-    | MaybeCommand   -- no need to do anything here
+    | KV Command Command
+    | At (List Command) Command
+    | Object (List Command)
     | KeyValuePairs
-    -- | OneOf (List Command)
+    | Dict Command
+    | MaybeCommand   -- no need to do anything here
+    | OneOf (List Command)
+    | Map Command
+    -- | DFail Command
+    | Succeed Command          -- always a Str in practise
+    | AndThen Command Command      -- second Command will be a Proc
+    | Custom Command      -- ignore the subsequent transformation
+    -- | Value
 
     | Var Name Command    -- only used in emit
     | Proc Name (List Param) Command
     | Call Name (List Command)    -- call procedure
 
-    | Error String
-    -- | Cntxt String
+    | Error String    -- use Fail?????

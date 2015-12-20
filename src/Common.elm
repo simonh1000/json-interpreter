@@ -44,6 +44,7 @@ word =
     regex "[a-zA-Z_\\d\\.\\$]+"
 
 -- variable/  function names
+-- used by pSucceed
 var : Parser Command
 var =
     word
