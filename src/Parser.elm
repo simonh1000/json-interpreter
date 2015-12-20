@@ -17,7 +17,7 @@ import AST exposing (Command(..))
 
 parseString : String -> Result.Result String (List Command)
 parseString s =
-    case C.parse (many eol *> (oneOrMoreProcs `or` singleItem) <* possibleSpacing <* end) s of
+    case parse (many eol *> (oneOrMoreProcs `or` singleItem) <* possibleSpacing <* end) s of
         (Done lst, cntx) ->
             Result.Ok lst
         (Fail errs, cntx) ->
@@ -110,32 +110,31 @@ pStr =
 -- 1 PRMITIVES
 pString : Parser Command
 pString =
-    string "string" `andThen` \_ -> C.succeed Strng
+    string "string" `andThen` \_ -> succeed Strng
 
 pInt : Parser Command
 pInt =
-    string "int" `andThen` \_ -> C.succeed Itg
+    string "int" `andThen` \_ -> succeed Itg
 
 pFlt : Parser Command
 pFlt =
-    string "float" `andThen` \_ -> C.succeed Flt
+    string "float" `andThen` \_ -> succeed Flt
 
 pBln : Parser Command
 pBln =
-    string "boolean" `andThen` \_ -> C.succeed Bln
+    string "boolean" `andThen` \_ -> succeed Bln
 
 pNull : Parser Command
 pNull =
-    (string "null" *> spacing *> (quotedWord `or` word) `andThen` (succeed << Null))
-    -- `or`
-    -- (string "null" *> word `andThen` (succeed << Null ))
+    (string "null" *> spacing *> (quotedWord `or` word)
+    `andThen` (succeed << Null))
 
 -- 5 KEY : VALUE
 -- does not capture when k is a function applied to something
 pKV : Parser Command
 pKV =
-    C.map KV ( (pStr `or` pVar) <* between spacing spacing (string ":="))
-    `C.andMap` pCommand
+    map KV ( (pStr `or` pVar) <* between spacing spacing (string ":="))
+    `andMap` pCommand
 
 -- -- 6 AT
 pAt : Parser Command
@@ -179,8 +178,8 @@ pTuple =
 -- 15 MAYBE
 pMaybe : Parser Command
 pMaybe =
-    string "maybe" <* spacing <* pCommand
-    `andThen` \_ -> succeed MaybeCommand
+    string "maybe" *> spacing *> pCommand
+    `andThen` (succeed << JMaybe)
 
 -- 17 KEY VALUE PAIRS
 pKeyValuePairs : Parser Command
@@ -207,7 +206,14 @@ pOneOf =
     string "oneOf" *> spacing *> listOf pCommand
     `andThen` (succeed << OneOf)
 
--- SUCCEED
+-- F A I L   /   S U C C E E D
+-- fail : String -> Decoder a
+-- ***** TOO NARROW ***** string could also be a passed parameter of a function
+pFail : Parser Command
+pFail =
+    string "fail" *> spacing *> pStr
+    `andThen` (succeed << DFail)
+
 -- succeed : a -> Decoder a
 -- ************* TOO NARROW *************************
 pSucceed : Parser Command
@@ -215,13 +221,6 @@ pSucceed =
     -- string "succeed" *> spacing *> (pStr `or` pVar)
     string "succeed" *> spacing *> pStr
     `andThen` (succeed << Succeed)
-
--- fail : String -> Decoder a
--- ***** TOO NARROW ***** string could also be a passed parameter of a function
-pFail : Parser Command
-pFail =
-    string "fail" *> spacing *> pStr
-    `andThen` (succeed << DFail)
 
 -- 16 CUSTOM
 -- customDecoder : Decoder a -> (a -> Result String b) -> Decoder b
@@ -269,8 +268,8 @@ pVar =
 
 -- before : Parser Command
 -- before =
---     C.map (Str << String.fromList) <| many (noneOf ['`', '\n'])
-    -- in C.map (\y -> Call "def " [y]) x
+--     map (Str << String.fromList) <| many (noneOf ['`', '\n'])
+    -- in map (\y -> Call "def " [y]) x
 --     -- (....) or pVar
 --     -- bracketed (many1 <| noneOf [')'])
 --     varOrBrackets

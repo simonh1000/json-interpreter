@@ -23,7 +23,7 @@ type Command
     | Object (List Command)
     | KeyValuePairs
     | Dict Command
-    | MaybeCommand   -- no need to do anything here
+    | JMaybe Command  -- no need to do anything here
     | OneOf (List Command)
     | Map Command
     | DFail Command

@@ -13,13 +13,15 @@ type Action
 content : Html
 content =
     Markdown.toHtml """
-## Test your Json decode statements
+# Elm Json.Decode interpreter
+
+This online tool aims to support the development of Json decoders. It implements a simple interpreter of the Json.Decode library and uses the applies the interpreted decoder to sample json content. An example is shown below - can you correct the deliberate mistake?
+
+Note that some decoders - keyValuePairs`, `value` etc. - make few requirements on the Json, and are thus not interpreted.
 
 Limitations - no support for:
- - `|>`
- - `null`
- - `andThen`
- - control flow syntax from Elm, e.g. `case`
+ - `andThen`, which is primarily because of;
+ - Elm control flow syntax, e.g. `case`, `|>`, but note that **`<|` is supported**
 
 """
 

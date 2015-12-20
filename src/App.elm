@@ -29,19 +29,19 @@ type alias Model =
 
 init =
     -- { json = "", decoderStr = ""
-    -- { json = "{\"simon\": \"Success!!!\"}"
     { json = "{\"outer\": {\"inner\": \"Success\"}}"
     -- { json = "{\"array\": [4,5,6,7,8]}"
-    -- { json = "[1,2,3,4,5]"
+    -- { json = "{\"array\": {\"f\":4, \"g\":5}}"
+    -- , decoderStr = "f1 = \"array\" := (dict int)"
     -- , decoderStr = "f1 = (\"simon\" := string)"
     -- , decoderStr = "\"outer\" := <| \"inner\" := string"
     -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"simon\" := string)\n\t(\"test\" := string)"
     -- , decoderStr = "f1 = at \n\t[\"outer\", \"inner\"] <|\n\t\toneOf [string, int]"
     -- , decoderStr = "f1 = object1 blah <| \"outer\" := (object1 blahblah <| \"inner\" := string)"
     -- , decoderStr = "f1 s = at [\"outer\", s] string\nf2 = f1 \"inner\""
-    , decoderStr = "f1 o d = at [o] (\"inner\" := d)\nf2 = f1 \"outer\" string"
+    -- , decoderStr = "f1 o d = at [o] (\"inner\" := d)\nf2 = f1 \"outer\" string"
     -- , decoderStr = "f1 s = s := string\nf2 = \"outer\" := f1 \"inner\""
-    -- , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 string"
+    , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 boolean"
     -- , decoderStr = "f1 = \"array\" := (list int)"
     -- , decoderStr = "func = \"array\" :=\n\t\ttuple5\n\t\t\t(\\a b c d e -> [a,b,c,d,e])\n\t\t\tint int int int string"
     -- , decoderStr = "func = tuple5 comb int int int int int"
@@ -108,7 +108,7 @@ update action model =
                             | decodeSuccess = True
                             , result =
                                 "Decode success: i.e. your json & decode functions are compatible."
-                                -- toString r
+                                -- r
                             }
                         Result.Err e ->
                             { model
@@ -129,8 +129,7 @@ view address model =
             , ("height", "100%")
             ]
         ]
-        [ navbar
-        -- , overlay address model.overlay
+        [ navbar model.overlay
         , Overlay.view (Signal.forwardTo address OverlayAction) model.overlay
         , mainSection address model
         , footer
@@ -143,7 +142,7 @@ view address model =
             ]
         ]
 
-navbar =
+navbar m =
     header
         [ navbarStyles ]
         [ h1
@@ -153,7 +152,7 @@ navbar =
                 , ("font-size", "22px")
                 ]
             ]
-            [ text "Elm Json decoding tester" ]
+            [ text <| if not m then "Elm Json.Decode interpreter" else "" ]
         , p []
             [ text "Simon Hampton ("
             , a
@@ -202,14 +201,19 @@ parseResult address model =
     then
         div
             [ footerStyles elmGreen
-            ] <|
-            [ h3
-                [ style [("margin", "0")] ]
-                [ --text ""
-                text "Choose entry point"
+            ]
+            [ div
+                [ style
+                    [ ("display" , "flex")]
                 ]
-            , div []
-                (List.map (decoderButton address) model.ast)
+                [ h3
+                    [ style [("margin", "0")] ]
+                    [ --text ""
+                    text "Choose entry point"
+                    ]
+                , div []
+                    (List.map (decoderButton address) model.ast)
+                ]
             , div
                 [ style [("font-size", "10px")]
                 ]
@@ -322,9 +326,9 @@ footerStyles c =
         , ("flex-grow", "1")
         , ("flex-basis", "0")
         , ("padding", "15px")
-        , ("display", "flex")
-        , ("flex-wrap", "wrap")
-        , ("align-items", "center")
+        -- , ("display", "flex")
+        -- , ("flex-wrap", "wrap")
+        -- , ("align-items", "center")
         ]
 
 fakeButton =

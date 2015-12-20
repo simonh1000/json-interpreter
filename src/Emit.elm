@@ -1,17 +1,12 @@
 module Emit (..) where
 
 import Json.Decode as Json exposing (..)
-import Array
 import List exposing (length)
+import Array
+import Dict
+import String
 
 import AST exposing (..)
-
-filt : Param -> Command -> Bool
-filt n f =
-    case f of
-        Proc name _ _ -> n == name
-        Var name _ -> n == name
-        otherwise -> False
 
 emit : List Command -> Command -> Json.Decoder String
 emit env com =
@@ -19,7 +14,7 @@ emit env com =
         lookup : String -> Command
         lookup n =
             Maybe.withDefault
-                (Error "loopup error")
+                (Error "lookup error")
                 -- env contains Var (aliases) and Procs
                 (List.head <| List.filter (filt n) env)
 
@@ -39,6 +34,25 @@ emit env com =
         Flt -> Json.map toString float
         Bln -> Json.map toString bool
         Null s -> null s
+        List com ->
+            list (emit env com)
+                |> Json.map (spaceSeparate "List")
+        Arr com ->
+            array (emit env com)
+                |> Json.map (spaceSeparate "Array.fromList" << Array.toList)
+
+        -- Test length. If OK, comvert to Object and pass to emit again
+        Tuple coms ->
+            list value
+            `andThen` \vs ->
+                if length vs == length coms
+                    then
+                        (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
+                        `andThen` succeed
+                    else fail <|
+                        "Array has wrong length: had " ++
+                        toString (length vs) ++ " elements vs expected " ++
+                        toString (length coms)
         KV key value ->
             case eval key of
                 Just k -> k := (emit env value)
@@ -53,42 +67,25 @@ emit env com =
             let
                 go : Command -> Json.Decoder String -> Json.Decoder String
                 go com acc =
-                    object2 (\a b -> b ++ "{k0: " ++ a ++ "}") (emit env com) acc
-            in  List.foldr go (succeed "Con: ") coms
+                    object2 (\a b -> b ++ " " ++ a) (emit env com) acc
+            in  List.foldr go (succeed "Con ") coms
 
-        List com ->
-            list (emit env com)
-                |> Json.map (List.foldr (++) "")
-        Arr com ->
-            array (emit env com)
-                |> Json.map (Array.foldr (++) "")
-        -- tuple2:  (String -> String -> value) -> Decoder String -> Decoder String -> Decoder String
-        Tuple coms ->
-            list value
-            `andThen` \vs ->
-                if length vs == length coms
-                    then
-                        (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
-                        `andThen` succeed
-                    else fail <|
-                        "Array has wrong length: had " ++
-                        toString (length vs) ++ " elements vs expected " ++
-                        toString (length coms)
+        KeyValuePairs -> succeed "keyValuePairs"
+        Dict com ->
+            dict (emit env com)
+                |> Json.map (spaceSeparate "Dict.fromList" << Dict.toList)
+        JMaybe com ->
+            maybe (emit env com)
+                |> Json.map toString
+
+        OneOf lst -> oneOf <| List.map (emit env) lst
         Map com -> emit env com
+        DFail com -> fail <| Maybe.withDefault "Fail error" (eval com)
         Succeed s ->
             case eval s of
                 Just s' -> succeed s'
                 Nothing -> fail <| "could not eval " ++ toString s
-        MaybeCommand -> succeed "maybe"
-        KeyValuePairs -> succeed "keyValuePairs"
-        OneOf lst -> oneOf <| List.map (emit env) lst
 
-        -- Only test com1
-        -- AndThen com1 com2 ->
-        --     emit env com1
-        --     `andThen` \v -> succeed (toString v)
-                -- let env' = (Proc ______) :: env
-                -- in emit env' Call "andThen" [v]
         -- Proc
         Call name params ->
             case lookup name of
@@ -104,19 +101,36 @@ emit env com =
                 Var vname vcom ->
                     emit env vcom
                 otherwise ->
-                    Json.fail ("Call loop failed for " ++ name)
+                    Json.fail ("Call lookup failed for " ++ name)
 
         Error e -> Json.fail e
         otherwise -> Json.fail <| "Whoops - emit can't yet handle " ++ toString com
+        -- Only test com1
+        -- AndThen com1 com2 ->
+        --     emit env com1
+        --     `andThen` \v -> succeed (toString v)
+                -- let env' = (Proc ______) :: env
+                -- in emit env' Call "andThen" [v]
 
 andMap : Decoder (a -> b) -> Decoder a -> Decoder b
 andMap decFun decA =
     object2 (\f a -> f a) decFun decA
 
+filt : Param -> Command -> Bool
+filt n f =
+    case f of
+        Proc name _ _ -> n == name
+        Var name _ -> n == name
+        otherwise -> False
+
 zip l1 l2 =
     case (l1,l2) of
         (l::ls, k::ks) -> (l,k) :: zip ls ks
         otherwise -> []
+
+spaceSeparate : String -> List a -> String
+spaceSeparate =
+    List.foldl <| \i acc -> acc ++ " " ++ (String.filter ((/=) '\"') (toString i))
 {-}
 tuple5
     :  (a -> b -> c -> d -> e -> value)
