@@ -131,7 +131,7 @@ view address model =
         ]
         [ navbar
         -- , overlay address model.overlay
-        -- , Overlay.view (Signal.forwardTo address OverlayAction) model.overlay
+        , Overlay.view (Signal.forwardTo address OverlayAction) model.overlay
         , mainSection address model
         , footer
             [ style

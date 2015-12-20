@@ -14,7 +14,7 @@ type Command
     | Itg
     | Flt
     | Bln
-    -- | Null ...
+    | Null String
     | List Command
     | Arr Command
     | Tuple (List Command)
@@ -26,9 +26,9 @@ type Command
     | MaybeCommand   -- no need to do anything here
     | OneOf (List Command)
     | Map Command
-    -- | DFail Command
+    | DFail Command
     | Succeed Command          -- always a Str in practise
-    | AndThen Command Command      -- second Command will be a Proc
+    -- | AndThen Command Command      -- second Command will be a Proc
     | Custom Command      -- ignore the subsequent transformation
     -- | Value
 

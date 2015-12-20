@@ -43,13 +43,6 @@ word : Parser String
 word =
     regex "[a-zA-Z_\\d\\.\\$]+"
 
--- variable/  function names
--- used by pSucceed
-var : Parser Command
-var =
-    word
-    `andThen` \w -> succeed <| Call w []
-
 -- stringLiteral : Parser String
 -- stringLiteral =
 --     between (char '"') (char '"')
@@ -59,10 +52,11 @@ quotedWord : Parser String
 quotedWord =
     between (char '"') (char '"') word
 
-stringLiteral : Parser Command
-stringLiteral =
-    between (char '"') (char '"') word
-    `andThen` (succeed << Str)
+-- stringLiteral : Parser Command
+-- stringLiteral =
+--     quotedWord
+--     -- between (char '"') (char '"') word
+--     `andThen` (succeed << Str)
 
 -- wordOrBrackets : Parser String
 -- wordOrBrackets =

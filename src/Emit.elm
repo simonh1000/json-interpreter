@@ -37,6 +37,8 @@ emit env com =
         Strng -> string
         Itg -> Json.map toString int
         Flt -> Json.map toString float
+        Bln -> Json.map toString bool
+        Null s -> null s
         KV key value ->
             case eval key of
                 Just k -> k := (emit env value)
@@ -82,9 +84,9 @@ emit env com =
         OneOf lst -> oneOf <| List.map (emit env) lst
 
         -- Only test com1
-        AndThen com1 com2 ->
-            emit env com1
-            `andThen` \v -> succeed (toString v)
+        -- AndThen com1 com2 ->
+        --     emit env com1
+        --     `andThen` \v -> succeed (toString v)
                 -- let env' = (Proc ______) :: env
                 -- in emit env' Call "andThen" [v]
         -- Proc

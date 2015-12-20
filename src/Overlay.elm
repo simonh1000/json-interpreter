@@ -15,7 +15,11 @@ content =
     Markdown.toHtml """
 ## Test your Json decode statements
 
-I cannot yet parse `|>`, `null` nor `andThen`.
+Limitations - no support for:
+ - `|>`
+ - `null`
+ - `andThen`
+ - control flow syntax from Elm, e.g. `case`
 
 """
 

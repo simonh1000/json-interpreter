@@ -55,7 +55,7 @@ parseFunctionSignature : Parser ()
 parseFunctionSignature =
     optional
         () <|
-        skip <| var <* between possibleSpacing spacing (char ':') <* many (noneOf ['\n']) *> spacing
+        skip <| pVar<* between possibleSpacing spacing (char ':') <* many (noneOf ['\n']) *> spacing
 
 -- C O M M A N D S
 commands =
@@ -67,19 +67,21 @@ commands =
                 , pInt
                 , pFlt
                 , pBln
-                , pKV
-                , pAt
-                , pObject
+                , pNull
                 , pList
                 , pArr
                 , pTuple
-                , pSucceed
-                , pDict
-                , pMap
-                , pOneOf
-                , pMaybe
-                , pCustom
+                , pKV
+                , pAt
+                , pObject
                 , pKeyValuePairs
+                , pDict
+                , pMaybe
+                , pOneOf
+                , pMap
+                , pFail
+                , pSucceed
+                , pCustom
                 , pStr
                 , pCall
                 ]
@@ -90,9 +92,9 @@ pCommand =
     -- (bracketed <| rec <| \() -> pAndThen)
     -- `or` commands
 
-pCommand' : Parser Command
-pCommand' =
-    commands
+-- pCommand' : Parser Command
+-- pCommand' =
+--     commands
 
 -- 0 NO <|
 pProblem : Parser Command
@@ -102,7 +104,8 @@ pProblem =
 
 pStr : Parser Command
 pStr =
-    stringLiteral `andThen` succeed
+    quotedWord `andThen` (succeed << Str)
+    -- pStr `andThen` succeed
 
 -- 1 PRMITIVES
 pString : Parser Command
@@ -121,19 +124,23 @@ pBln : Parser Command
 pBln =
     string "boolean" `andThen` \_ -> C.succeed Bln
 
---null
+pNull : Parser Command
+pNull =
+    (string "null" *> spacing *> (quotedWord `or` word) `andThen` (succeed << Null))
+    -- `or`
+    -- (string "null" *> word `andThen` (succeed << Null ))
 
 -- 5 KEY : VALUE
 -- does not capture when k is a function applied to something
 pKV : Parser Command
 pKV =
-    C.map KV ( (stringLiteral `or` var) <* between spacing spacing (string ":="))
+    C.map KV ( (pStr `or` pVar) <* between spacing spacing (string ":="))
     `C.andMap` pCommand
 
 -- -- 6 AT
 pAt : Parser Command
 pAt =
-    string "at" *> spacing *> listOf (stringLiteral `or` var)
+    string "at" *> spacing *> listOf (pStr `or` pVar)
     `andThen` \lst -> spacing *> pCommand
     `andThen` \dec -> succeed (At lst dec)
 --
@@ -153,9 +160,9 @@ pList =
 
 pArr : Parser Command
 pArr =
-    pStructure "array" Arr
-    -- string "array" *> spacing *> pCommand
-    -- `andThen` (succeed << Arr)
+    -- pStructure "array" Arr
+    string "array" *> spacing *> pCommand
+    `andThen` (succeed << Arr)
 
 pStructure : String -> (Command -> Command) -> Parser Command
 pStructure typ cnstrctr =
@@ -169,84 +176,11 @@ pTuple =
     `andThen` \n -> spacing *> (word `or` anonFunc) *> count n (spacing *> pCommand)
     `andThen` (succeed << Tuple)
 
--- 11 ANDTHEN
--- string `andThen` test
-pAndThen : Parser Command
-pAndThen =
-    let ans =
-        -- pCommand' <* spacing <* string "`andThen`" <* spacing
-        before <* string "`andThen`" <* spacing
-        -- `andThen` \dec1 -> pCommand
-        `andThen` \str -> pCommand
-        `andThen` \dec2 ->
-            case str of
-                Str str ->
-                    case parse pCommand' str of
-                        (Done dec1, cntx) ->
-                            succeed <| AndThen dec1 (Proc "andthen" [] dec2)
-                        (Fail e, cntx) ->
-                            fail <| "andThen" :: e
-                _ -> fail ["andThen", toString str]
-
-    in ans
-
-before : Parser Command
-before =
-    C.map (Str << String.fromList) <| many (noneOf ['`', '\n'])
-    -- in C.map (\y -> Call "def " [y]) x
---     -- (....) or var
---     -- bracketed (many1 <| noneOf [')'])
---     varOrBrackets
---         <* spacing <* string "`andThen`" <* spacing <* (var `or` anonFunc)
---     `andThen`
---         \decStr ->
---             case parse pCommand decStr of
---                 (Done com, _) -> (succeed << AndThen) com
---                 (Fail m, _) -> (succeed << AndThen) (Error <| toString m)
-
--- MAP
-pMap : Parser Command
-pMap =
-    -- string "map" *> spacing *> (var `or` anonFunc) *> spacing *> pCommand
-    string "map" *> spacing *> (transformFunc `or` anonFunc) *> spacing *> pCommand
-    `andThen` (succeed << Map)
-
--- SUCCEED
--- succeed : a -> Decoder a
--- ************* TOO NARROW *************************
-pSucceed : Parser Command
-pSucceed =
-    -- string "succeed" *> spacing *> (stringLiteral `or` var)
-    string "succeed" *> spacing *> stringLiteral
-    `andThen` (succeed << Succeed)
-
--- fail : String -> Decoder a
--- ***** TOO NARROW ***** string could also be a passed parameter of a function
--- pFail : Parser Command
--- pFail =
---     string "fail" *> spacing *> stringLiteral
---     `andThen` (succeed << DFail)
-
--- 14 ONEOF
-pOneOf : Parser Command
-pOneOf =
-    string "oneOf" *> spacing *> listOf pCommand
-    `andThen` (succeed << OneOf)
-
 -- 15 MAYBE
 pMaybe : Parser Command
 pMaybe =
     string "maybe" <* spacing <* pCommand
     `andThen` \_ -> succeed MaybeCommand
-
--- 16 CUSTOM
--- customDecoder : Decoder a -> (a -> Result String b) -> Decoder b
-pCustom : Parser Command
-pCustom =
-    -- string "customDecoder" *> spacing *> pCommand <* spacing <* var
-    string "customDecoder" *> spacing *>
-        pCommand <* spacing <* bracketed (skip (many1 var) `or` skip anonFunc)
-    `andThen` \dec -> succeed (Custom dec)
 
 -- 17 KEY VALUE PAIRS
 pKeyValuePairs : Parser Command
@@ -260,9 +194,89 @@ pDict =
     string "dict" *> spacing *> pCommand
     `andThen` (succeed << Dict)
 
+-- MAP
+pMap : Parser Command
+pMap =
+    -- string "map" *> spacing *> (pVar`or` anonFunc) *> spacing *> pCommand
+    string "map" *> spacing *> (transformFunc `or` anonFunc) *> spacing *> pCommand
+    `andThen` (succeed << Map)
+
+-- 14 ONEOF
+pOneOf : Parser Command
+pOneOf =
+    string "oneOf" *> spacing *> listOf pCommand
+    `andThen` (succeed << OneOf)
+
+-- SUCCEED
+-- succeed : a -> Decoder a
+-- ************* TOO NARROW *************************
+pSucceed : Parser Command
+pSucceed =
+    -- string "succeed" *> spacing *> (pStr `or` pVar)
+    string "succeed" *> spacing *> pStr
+    `andThen` (succeed << Succeed)
+
+-- fail : String -> Decoder a
+-- ***** TOO NARROW ***** string could also be a passed parameter of a function
+pFail : Parser Command
+pFail =
+    string "fail" *> spacing *> pStr
+    `andThen` (succeed << DFail)
+
+-- 16 CUSTOM
+-- customDecoder : Decoder a -> (a -> Result String b) -> Decoder b
+pCustom : Parser Command
+pCustom =
+    -- string "customDecoder" *> spacing *> pCommand <* spacing <* pVar
+    string "customDecoder" *> spacing *>
+        pCommand <* spacing <* bracketed (skip (many1 pVar) `or` skip anonFunc)
+    `andThen` \dec -> succeed (Custom dec)
+
 -- CALL
 pCall : Parser Command
 pCall =
     word
-    `andThen` \proc -> many (spaces *> (stringLiteral `or` pCommand))
+    `andThen` \proc -> many (spaces *> (pStr `or` pCommand))
     `andThen` \args -> succeed <| Call proc args
+
+-- V A R I A B L E
+pVar: Parser Command
+pVar =
+    word `andThen` \w -> succeed <| Call w []
+
+
+
+-- 11 ANDTHEN
+-- string `andThen` test
+-- pAndThen : Parser Command
+-- pAndThen =
+--     let ans =
+--         -- pCommand' <* spacing <* string "`andThen`" <* spacing
+--         before <* string "`andThen`" <* spacing
+--         -- `andThen` \dec1 -> pCommand
+--         `andThen` \str -> pCommand
+--         `andThen` \dec2 ->
+--             case str of
+--                 Str str ->
+--                     case parse pCommand' str of
+--                         (Done dec1, cntx) ->
+--                             succeed <| AndThen dec1 (Proc "andthen" [] dec2)
+--                         (Fail e, cntx) ->
+--                             fail <| "andThen" :: e
+--                 _ -> fail ["andThen", toString str]
+--
+--     in ans
+
+-- before : Parser Command
+-- before =
+--     C.map (Str << String.fromList) <| many (noneOf ['`', '\n'])
+    -- in C.map (\y -> Call "def " [y]) x
+--     -- (....) or pVar
+--     -- bracketed (many1 <| noneOf [')'])
+--     varOrBrackets
+--         <* spacing <* string "`andThen`" <* spacing <* (pVar`or` anonFunc)
+--     `andThen`
+--         \decStr ->
+--             case parse pCommand decStr of
+--                 (Done com, _) -> (succeed << AndThen) com
+--                 (Fail m, _) -> (succeed << AndThen) (Error <| toString m)
