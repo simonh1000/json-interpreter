@@ -6,54 +6,47 @@ import List exposing (length)
 
 import AST exposing (..)
 
+filt : Param -> Command -> Bool
+filt n f =
+    case f of
+        Proc name _ _ -> n == name
+        Var name _ -> n == name
+        otherwise -> False
+
 emit : List Command -> Command -> Json.Decoder String
 emit env com =
     let
-        filt : Param -> Command -> Bool
-        filt n f =
-            case f of
-                Proc name _ _ -> n == name
-                Var name _ -> n == name
-                otherwise -> False
-        -- env contains Var (aliases) and Procs
         lookup : String -> Command
         lookup n =
             Maybe.withDefault
                 (Error "loopup error")
+                -- env contains Var (aliases) and Procs
                 (List.head <| List.filter (filt n) env)
+
+        eval : Command -> Maybe String
+        eval ast =
+            case ast of
+                Str s -> Just s
+                Call p _ ->
+                    case lookup p of
+                        Var _ p' -> eval p'
+                        otherwise -> Nothing
+                otherwise -> Nothing
     in
     case com of
-        -- Str s -> succeed s
         Strng -> string
         Itg -> Json.map toString int
         Flt -> Json.map toString float
         KV key value ->
-            case key of
-                Str k' ->
-                    k' := (emit env value)
-                Call p _ ->
-                    case lookup p of
-                        Var _ p' ->
-                            emit env <| KV p' value
-                        otherwise -> fail <| "KV: can't call " ++ p
-                otherwise ->
-                    fail <| "KV: odd key " ++ toString key
+            case eval key of
+                Just k -> k := (emit env value)
+                Nothing ->fail <| "Key lookup failure for " ++ (toString key)
         At lst dec ->
-            let stringify s =
-                case s of
-                    Str s' -> s'
-                    otherwise -> "fail"
-                    -- Call name _ ->
-                    --     case lookup name of
-                    --         Var vname vcom ->
-                    --             vcom
-                    --         otherwise ->
-                    --             Json.fail ("Call loop failed for " ++ name)
-            in  at (List.map stringify lst) (emit env dec)
-            -- let stringify s =
-            --     case s of
-            --         Str s' -> s'
-            --         otherwise -> decodeString (emit env s) "fail"
+            let
+                fields = List.map eval lst
+            in case List.any ( (==) Nothing) fields of
+                True -> fail "something wrong with fields"
+                False -> at (List.map (Maybe.withDefault "") fields) (emit env dec)
         Object coms ->
             let
                 go : Command -> Json.Decoder String -> Json.Decoder String
@@ -83,7 +76,8 @@ emit env com =
         Succeed _ -> Json.succeed "succeed"
         MaybeCommand -> Json.succeed "maybe"
         KeyValuePairs -> Json.succeed "keyValuePairs"
-        -- [Proc "shape" [] (AndThen (KV (Str "tag") Strng) (Proc "andthen" [] (Call "shapeInfo" [])))]
+
+        -- Only test com1
         AndThen com1 com2 ->
             emit env com1
             `andThen` \v -> Json.succeed (toString v)
@@ -136,3 +130,24 @@ object5
     -> Decoder e
     -> Decoder value
 -}
+    -- stringify s =
+    -- case s of
+    --     Str s' -> s'
+    --     otherwise -> "fail"
+        -- Call name _ ->
+        --     case lookup name of
+        --         Var vname vcom ->
+        --             vcom
+        --         otherwise ->
+        --             Json.fail ("Call loop failed for " ++ name)
+    -- fields = List.map (\l -> Maybe.withDefault "" <| eval l) lst
+            -- case key of
+            --     Str k' ->
+            --         k' := (emit env value)
+            --     Call p _ ->
+            --         case lookup p of
+            --             Var _ p' ->
+            --                 emit env <| KV p' value
+            --             otherwise -> fail <| "KV: can't call " ++ p
+            --     otherwise ->
+            --         fail <| "KV: odd key " ++ toString key

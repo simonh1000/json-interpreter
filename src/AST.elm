@@ -27,12 +27,11 @@ type Command
     | Succeed Command
     | MaybeCommand   -- no need to do anything here
     | KeyValuePairs
+    -- | OneOf (List Command)
 
     | Var Name Command    -- only used in emit
     | Proc Name (List Param) Command
-    -- | P String            -- param
     | Call Name (List Command)    -- call procedure
-    -- | Func Name Command
 
     | Error String
-    | Cntxt String
+    -- | Cntxt String
