@@ -12,6 +12,7 @@ import Json.Decode as Json
 import Parser exposing (parseString)
 import AST exposing (Command(..))
 import Emit exposing (..)
+import Overlay exposing (elmBlue)
 
 -- MODEL
 
@@ -23,6 +24,7 @@ type alias Model =
     , result : String
     , errorMessage: String
     , decodeSuccess : Bool
+    , overlay : Bool
     }
 
 init =
@@ -33,11 +35,12 @@ init =
     -- , decoderStr = "f1 = (\"simon\" := string)"
     -- , decoderStr = "\"outer\" := <| \"inner\" := string"
     -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"simon\" := string)\n\t(\"test\" := string)"
-    -- , decoderStr = "f1 = at \n\t[\"outer\"] <|\n\t\"inner\" := string"
+    -- , decoderStr = "f1 = at \n\t[\"outer\", \"inner\"] <|\n\t\toneOf [string, int]"
+    , decoderStr = "f1 = object1 blah <| \"outer\" := (object1 blahblah <| \"inner\" := string)"
     -- , decoderStr = "f1 s = at [\"outer\", s] string\nf2 = f1 \"inner\""
     -- , decoderStr = "f1 o d = at [o] (\"inner\" := d)\nf2 = f1 \"outer\" string"
     -- , decoderStr = "f1 s = s := string\nf2 = \"outer\" := f1 \"inner\""
-    , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 string"
+    -- , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 string"
     -- , decoderStr = "f1 = \"array\" := (list int)"
     -- , decoderStr = "func = \"array\" :=\n\t\ttuple5\n\t\t\t(\\a b c d e -> [a,b,c,d,e])\n\t\t\tint int int int string"
     -- , decoderStr = "func = tuple5 comb int int int int int"
@@ -46,6 +49,7 @@ init =
     , parseSuccess = False
     , errorMessage = ""
     , decodeSuccess = False
+    , overlay = True
     }
 
 -- UPDATE
@@ -55,6 +59,7 @@ type Action
     | Decoder String
     | ChooseDecoder String
     | Tick Time
+    | OverlayAction Overlay.Action
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
@@ -101,7 +106,8 @@ update action model =
                             { model
                             | decodeSuccess = True
                             , result =
-                                "Decode success: i.e. your json seems to be compatible with your decode functions"
+                                "Decode success: i.e. your json & decode functions are compatible."
+                                -- toString r
                             }
                         Result.Err e ->
                             { model
@@ -109,6 +115,7 @@ update action model =
                             , result = "Decode error: " ++ e
                             }
             in ( newModel , Effects.none )
+        OverlayAction _ -> ( { model | overlay = False }, Effects.none )
 
 -- VIEW
 
@@ -122,6 +129,8 @@ view address model =
             ]
         ]
         [ navbar
+        -- , overlay address model.overlay
+        , Overlay.view (Signal.forwardTo address OverlayAction) model.overlay
         , mainSection address model
         , footer
             [ style
@@ -154,11 +163,13 @@ navbar =
             ]
         ]
 
+-- M A I N   S E C T I O N
+
 mainSection address model =
     div
         [ style
             [ ( "display", "flex")
-            , ("flex-grow", "2")
+            , ( "flex-grow", "2" )
             ]
         ]
         [ div
@@ -171,7 +182,6 @@ mainSection address model =
                 , onchange address Decoder
                 ]
                 [ text model.decoderStr ]
-            , p [] [ text "Sorry: I cannot yet parse |>, nor the second part of `andThen`s. Some functions are also hard."]
             ]
         , div
             [ containerStyle elmPale elmGrey ]
@@ -255,7 +265,6 @@ escapeText str =
 -- STYLES
 
 elmGreen = "#7fd13b"
-elmBlue = "#60B5CC"
 elmGrey = "#293C4B"   -- "rgb(41, 60, 75)"
 elmPale = "#f7f7f7"
 elmOrange = "#f0ad00"
