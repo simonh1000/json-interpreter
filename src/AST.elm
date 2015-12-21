@@ -26,8 +26,8 @@ type Command
     | JMaybe Command  -- no need to do anything here
     | OneOf (List Command)
     | Map Command
-    | DFail Command
-    | Succeed Command          -- always a Str in practise
+    | DFail Command          -- always a Str in practise
+    | Succeed Command
     -- | AndThen Command Command      -- second Command will be a Proc
     | Custom Command      -- ignore the subsequent transformation
     -- | Value

@@ -27,6 +27,14 @@ emit env com =
                         Var _ p' -> eval p'
                         otherwise -> Nothing
                 otherwise -> Nothing
+
+        iterateStructure prefix coms =
+            let
+                go : Command -> Json.Decoder String -> Json.Decoder String
+                go com acc =
+                    object2 (\a b -> b ++ " " ++ a) (emit env com) acc
+            in  List.foldl go (succeed prefix) coms
+
     in
     case com of
         Strng -> string
@@ -47,10 +55,12 @@ emit env com =
             `andThen` \vs ->
                 if length vs == length coms
                     then
-                        (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
-                        `andThen` succeed
+                        let objRep = List.indexedMap (\i com -> KV (Str (toString i)) com) coms
+                        in  iterateStructure "Tup: " objRep
+                        -- (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
+                            `andThen` succeed
                     else fail <|
-                        "Array has wrong length: had " ++
+                        "Array has wrong length: " ++
                         toString (length vs) ++ " elements vs expected " ++
                         toString (length coms)
         KV key value ->
@@ -63,12 +73,12 @@ emit env com =
             in case List.any ( (==) Nothing) fields of
                 True -> fail "something wrong with fields"
                 False -> at (List.map (Maybe.withDefault "") fields) (emit env dec)
-        Object coms ->
-            let
-                go : Command -> Json.Decoder String -> Json.Decoder String
-                go com acc =
-                    object2 (\a b -> b ++ " " ++ a) (emit env com) acc
-            in  List.foldr go (succeed "Con ") coms
+        Object coms -> iterateStructure "Obj " coms
+            -- let
+            --     go : Command -> Json.Decoder String -> Json.Decoder String
+            --     go com acc =
+            --         object2 (\a b -> b ++ " " ++ a) (emit env com) acc
+            -- in  List.foldl go (succeed "Con ") coms
 
         KeyValuePairs -> succeed "keyValuePairs"
         Dict com ->
@@ -80,7 +90,7 @@ emit env com =
 
         OneOf lst -> oneOf <| List.map (emit env) lst
         Map com -> emit env com
-        DFail com -> fail <| Maybe.withDefault "Fail error" (eval com)
+        DFail com -> Json.map toString <| succeed <| Maybe.withDefault "Fail error" (eval com)
         Succeed s ->
             case eval s of
                 Just s' -> succeed s'

@@ -15,13 +15,15 @@ content =
     Markdown.toHtml """
 # Elm Json.Decode interpreter
 
-This online tool aims to support the development of Json decoders. It implements a simple interpreter of the Json.Decode library and uses the applies the interpreted decoder to sample json content. An example is shown below - can you correct the deliberate mistake?
+This online tool aims to support the development of Json decoders. It implements a simple interpreter of the Json.Decode library, and calls `decodeString` with the result and the json value provided. An example is shown below - can you correct the deliberate mistake?
 
-Note that some decoders - keyValuePairs`, `value` etc. - make few requirements on the Json, and are thus not interpreted.
+Note that some decoders - e.g. `keyValuePairs`, `value` - make no specific requirements on the Json, and are thus not interpreted.
 
-Limitations - no support for:
- - `andThen`, which is primarily because of;
- - Elm control flow syntax, e.g. `case`, `|>`, but note that **`<|` is supported**
+A few things to note:
+ - `succeed` is not polymorphic; it only supports strings and integers
+ - `andThen` is not supported, which is primarily because;
+ - there is no interpretation of Elm control flow syntax, e.g. `case`, `if ... then ... else`, ...; and
+ - while `<|` **is supported**, `|>` is not
 
 """
 

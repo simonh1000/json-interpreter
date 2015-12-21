@@ -9,8 +9,8 @@ import Time exposing (Time)
 import String
 import Json.Decode as Json
 
-import Parser exposing (parseString)
 import AST exposing (Command(..))
+import Parser exposing (parseString)
 import Emit exposing (..)
 import Overlay
 
@@ -29,21 +29,21 @@ type alias Model =
 
 init =
     -- { json = "", decoderStr = ""
-    { json = "{\"outer\": {\"inner\": \"Success\"}}"
-    -- { json = "{\"array\": [4,5,6,7,8]}"
-    -- { json = "{\"array\": {\"f\":4, \"g\":5}}"
+    -- { json = "{\"outer\": {\"inner\": \"Success\"}}"
+    -- { json = "{ \"x\":3, \"y\":4, \"z\":5 }"
+    { json = "{\"array\": [4,5,6,7,8]}"
     -- , decoderStr = "f1 = \"array\" := (dict int)"
     -- , decoderStr = "f1 = (\"simon\" := string)"
     -- , decoderStr = "\"outer\" := <| \"inner\" := string"
-    -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"simon\" := string)\n\t(\"test\" := string)"
+    -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"outer\" := bool)\n\t(\"inner\" := string)"
     -- , decoderStr = "f1 = at \n\t[\"outer\", \"inner\"] <|\n\t\toneOf [string, int]"
     -- , decoderStr = "f1 = object1 blah <| \"outer\" := (object1 blahblah <| \"inner\" := string)"
     -- , decoderStr = "f1 s = at [\"outer\", s] string\nf2 = f1 \"inner\""
     -- , decoderStr = "f1 o d = at [o] (\"inner\" := d)\nf2 = f1 \"outer\" string"
     -- , decoderStr = "f1 s = s := string\nf2 = \"outer\" := f1 \"inner\""
-    , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 boolean"
+    -- , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 boolean"
     -- , decoderStr = "f1 = \"array\" := (list int)"
-    -- , decoderStr = "func = \"array\" :=\n\t\ttuple5\n\t\t\t(\\a b c d e -> [a,b,c,d,e])\n\t\t\tint int int int string"
+    , decoderStr = "func = \"array\" :=\n\t\ttuple5\n\t\t\tModel\n\t\t\tint int int int string"
     -- , decoderStr = "func = tuple5 comb int int int int int"
     , result = ""
     , ast = []
@@ -100,21 +100,20 @@ update action model =
             , Effects.none
             )
         ChooseDecoder name ->
-            let
-                newModel =
-                    case Json.decodeString (emit model.ast (Call name [])) model.json of
-                        Result.Ok r ->
-                            { model
-                            | decodeSuccess = True
-                            , result =
-                                "Decode success: i.e. your json & decode functions are compatible."
-                                -- r
-                            }
-                        Result.Err e ->
-                            { model
-                            | decodeSuccess = False
-                            , result = "Decode error: " ++ e
-                            }
+            let newModel =
+                case Json.decodeString (emit model.ast (Call name [])) model.json of
+                    Result.Ok r ->
+                        { model
+                        | decodeSuccess = True
+                        , result =
+                            "Success: decoder(s) & json match."
+                            -- r
+                        }
+                    Result.Err e ->
+                        { model
+                        | decodeSuccess = False
+                        , result = e
+                        }
             in ( newModel , Effects.none )
         OverlayAction _ -> ( { model | overlay = False }, Effects.none )
 
@@ -208,8 +207,7 @@ parseResult address model =
                 ]
                 [ h3
                     [ style [("margin", "0")] ]
-                    [ --text ""
-                    text "Choose entry point"
+                    [ text "Choose entry point"
                     ]
                 , div []
                     (List.map (decoderButton address) model.ast)

@@ -1,3 +1,18 @@
+{-| Need to capture
+words:
+    - primitives,
+    - parameters   (assumed to be in function def because must compile)
+    - functions
+        - applied: including Xyz.fnc and Constructors
+        - defined: word word = ...
+"word": String
+-123: digit
+
+at [word, "word"]
+object2 (word word) word (word ("word" or digit))
+tuple2 (,) string string
+
+-}
 module Common (..) where
 
 import Combine exposing (..)
@@ -14,7 +29,15 @@ delimiters = [',', ']', ')', '"']
 
 -- SPACING
 spaceChars = [' ', '\t']
+
 spacingChars = '\n' :: spaceChars
+
+wordDelimiters =
+    spacingChars ++ delimiters
+
+endWord =
+    end `or`
+    (skip <| oneOf <| spacingChars ++ delimiters)
 
 spaces =
     skipMany1 (oneOf spaceChars)
@@ -39,9 +62,15 @@ possibleSpacing =
 --     regex "[a-zA-Z_\\d\\.\\$]+"
 
 -- 1 or more letter, numbers, . $
+-- must exclude comma so that "float," is properly handled
+-- must include comma to capture e.g. (,,,) in objext3 (,,,)
 word : Parser String
 word =
-    regex "[a-zA-Z_\\d\\.\\$]+"
+    regex "[a-zA-Z\\d\\_\\.\\$]+"
+
+number : Parser String
+number =
+    regex "[-]?[0-9]+"
 
 -- stringLiteral : Parser String
 -- stringLiteral =
@@ -51,6 +80,10 @@ word =
 quotedWord : Parser String
 quotedWord =
     between (char '"') (char '"') word
+
+sentence : Parser String
+sentence =
+    map String.fromList <| between (char '"') (char '"') (many <| noneOf ['"'])
 
 -- stringLiteral : Parser Command
 -- stringLiteral =
@@ -102,6 +135,12 @@ anonFunc =
     in
     map String.fromList <| between pre (char ')') (many1 <| noneOf [')'])
     -- between openBrackets closeBrackets (char '\' )
+
+somethingInBrackets : Parser String
+somethingInBrackets =
+    map String.fromList <| between (char '(') (char ')') (many <| noneOf [')'])
+
+-- LISTOF
 
 listOf : Parser a -> Parser (List a)
 listOf dec =

@@ -39,6 +39,7 @@ singleItem =
 -- PROCS / FUNCTIONS
 
 -- includes spaces at end of definition
+-- ***** Should not fail when a parameter is used in the body of Proc **********
 pProc : Parser Command
 pProc =
     parseFunctionSignature *> many1 (word <* spaces)
@@ -46,8 +47,6 @@ pProc =
         `andThen` \decoder ->
             case ps of
                 [] -> fail ["Failure parsing Proc"]
-                -- [x] -> succeed <| Proc x [] decoder
-                -- (x :: xs) -> fail ["Can't handle functions with parameters yet"]
                 (x :: xs) -> succeed <| Proc x xs decoder
 
 -- if there is signature, ignore it
@@ -63,10 +62,11 @@ commands =
         rec <| \() ->
             choice
                 [ pProblem
-                , pString
-                , pInt
-                , pFlt
-                , pBln
+                , pPrimitive
+                -- , pString
+                -- , pInt
+                -- , pFlt
+                -- , pBln
                 , pNull
                 , pList
                 , pArr
@@ -104,52 +104,31 @@ pProblem =
 
 pStr : Parser Command
 pStr =
-    quotedWord `andThen` (succeed << Str)
-    -- pStr `andThen` succeed
+    sentence `andThen` (succeed << Str)
+
+pNumber : Parser Command
+pNumber =
+    number `andThen` (succeed << Str)
 
 -- 1 PRMITIVES
-pString : Parser Command
-pString =
-    string "string" `andThen` \_ -> succeed Strng
-
-pInt : Parser Command
-pInt =
-    string "int" `andThen` \_ -> succeed Itg
-
-pFlt : Parser Command
-pFlt =
-    string "float" `andThen` \_ -> succeed Flt
-
-pBln : Parser Command
-pBln =
-    string "boolean" `andThen` \_ -> succeed Bln
+-- **** fails on e.g. stringy ******
+-- USE WHILE INSTEAD?????
+pPrimitive : Parser Command
+pPrimitive =
+    word
+    `andThen` \p ->
+        case p of
+            "string" -> succeed Strng
+            "int" -> succeed Itg
+            "float" -> succeed Flt
+            "bool" -> succeed Bln
+            otherwise -> fail ["x", p, "y"]
 
 pNull : Parser Command
 pNull =
     (string "null" *> spacing *> (quotedWord `or` word)
     `andThen` (succeed << Null))
 
--- 5 KEY : VALUE
--- does not capture when k is a function applied to something
-pKV : Parser Command
-pKV =
-    map KV ( (pStr `or` pVar) <* between spacing spacing (string ":="))
-    `andMap` pCommand
-
--- -- 6 AT
-pAt : Parser Command
-pAt =
-    string "at" *> spacing *> listOf (pStr `or` pVar)
-    `andThen` \lst -> spacing *> pCommand
-    `andThen` \dec -> succeed (At lst dec)
---
--- -- 7 OBJECT
-pObject : Parser Command
-pObject =
-    string "object" *> Num.digit
-    `andThen` \n ->
-        spacing *> (anonFunc `or` transformFunc) *> count n (spacing *> bracketed (possibleSpacing *> pCommand))
-        `andThen` (succeed << Object)
 -- -- 8 LIST / ARRAY
 pList : Parser Command
 pList =
@@ -172,9 +151,31 @@ pStructure typ cnstrctr =
 pTuple : Parser Command
 pTuple =
     string "tuple" *> Num.digit
-    `andThen` \n -> spacing *> (word `or` anonFunc) *> count n (spacing *> pCommand)
+    `andThen` \n -> spacing *> bracketed (word `or` anonFunc) *> count n (spacing *> pCommand)
     `andThen` (succeed << Tuple)
 
+-- 5 KEY : VALUE
+-- does not capture when k is a function applied to something
+pKV : Parser Command
+pKV =
+    map KV ( (pStr `or` pVar) <* between spacing spacing (string ":="))
+    `andMap` pCommand
+
+-- -- 6 AT
+pAt : Parser Command
+pAt =
+    string "at" *> spacing *> listOf (pStr `or` pVar)
+    `andThen` \lst -> spacing *> pCommand
+    `andThen` \dec -> succeed (At lst dec)
+--
+-- -- 7 OBJECT
+pObject : Parser Command
+pObject =
+    string "object" *> Num.digit
+    `andThen` \n ->
+        -- spacing *> (anonFunc `or` transformFunc) *> count n (spacing *> bracketed (possibleSpacing *> pCommand))
+        spacing *> (word `or` somethingInBrackets) *> count n (spacing *> bracketed (possibleSpacing *> pCommand))
+        `andThen` (succeed << Object)
 -- 15 MAYBE
 pMaybe : Parser Command
 pMaybe =
@@ -196,8 +197,8 @@ pDict =
 -- MAP
 pMap : Parser Command
 pMap =
-    -- string "map" *> spacing *> (pVar`or` anonFunc) *> spacing *> pCommand
-    string "map" *> spacing *> (transformFunc `or` anonFunc) *> spacing *> pCommand
+    string "map" *> spacing *> (word`or` somethingInBrackets) *> spacing *> pCommand
+    -- string "map" *> spacing *> (transformFunc `or` anonFunc) *> spacing *> pCommand
     `andThen` (succeed << Map)
 
 -- 14 ONEOF
@@ -219,7 +220,7 @@ pFail =
 pSucceed : Parser Command
 pSucceed =
     -- string "succeed" *> spacing *> (pStr `or` pVar)
-    string "succeed" *> spacing *> pStr
+    string "succeed" *> spacing *> (pNumber `or` pStr)
     `andThen` (succeed << Succeed)
 
 -- 16 CUSTOM
@@ -232,11 +233,20 @@ pCustom =
     `andThen` \dec -> succeed (Custom dec)
 
 -- CALL
+-- either fnc or (fnc p1 ...)
 pCall : Parser Command
 pCall =
-    word
-    `andThen` \proc -> many (spaces *> (pStr `or` pCommand))
-    `andThen` \args -> succeed <| Call proc args
+    (word `andThen` \proc -> succeed <| Call proc [])
+    `or` pCallWithParams
+    -- `andThen` \proc -> many (spaces *> (pStr `or` pCommand))
+    -- `andThen` \args -> succeed <| Call proc args
+
+-- pCallWithParams =
+--     let pCWP =
+--         word
+--         `andThen` \proc -> many1 (spaces *> (pStr `or` pCommand))
+--         `andThen` \args -> succeed <| Call proc args
+--     in between openBrackets closeBrackets *> pCWP
 
 -- V A R I A B L E
 pVar: Parser Command
@@ -278,4 +288,23 @@ pVar =
 --         \decStr ->
 --             case parse pCommand decStr of
 --                 (Done com, _) -> (succeed << AndThen) com
---                 (Fail m, _) -> (succeed << AndThen) (Error <| toString m)
+-- --                 (Fail m, _) -> (succeed << AndThen) (Error <| toString m)
+-- pString : Parser Command
+-- pString =
+--     string "string" -- *> endWord
+--     `andThen` \_ -> succeed Strng
+--
+-- pInt : Parser Command
+-- pInt =
+--     string "int" -- *> endWord
+--     `andThen` \_ -> succeed Itg
+--
+-- pFlt : Parser Command
+-- pFlt =
+--     string "float" -- *> endWord
+--     `andThen` \_ -> succeed Flt
+--
+-- pBln : Parser Command
+-- pBln =
+--     string "boolean" -- *> endWord
+--     `andThen` \_ -> succeed Bln
