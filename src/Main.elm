@@ -5,6 +5,7 @@ import Effects exposing (Effects)
 import Task
 
 import App exposing (Action(..), init, update, view)
+-- import Testing exposing (Action(..), init, update, view)
 
 app =
     StartApp.start

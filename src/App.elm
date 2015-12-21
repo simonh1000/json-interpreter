@@ -10,7 +10,7 @@ import String
 import Json.Decode as Json
 
 import AST exposing (Command(..))
-import Parser exposing (parseString)
+import Parser2 exposing (parseString)
 import Emit exposing (..)
 import Overlay
 
@@ -28,12 +28,10 @@ type alias Model =
     }
 
 init =
-    -- { json = "", decoderStr = ""
     -- { json = "{\"outer\": {\"inner\": \"Success\"}}"
     -- { json = "{ \"x\":3, \"y\":4, \"z\":5 }"
-    { json = "{\"array\": [4,5,6,7,8]}"
-    -- , decoderStr = "f1 = \"array\" := (dict int)"
-    -- , decoderStr = "f1 = (\"simon\" := string)"
+    { json = "{\"data\": [4,5,6,7,8]}"
+    -- , decoderStr = "f1 = \"data\" := (dict int)"
     -- , decoderStr = "\"outer\" := <| \"inner\" := string"
     -- , decoderStr = "f1 = object2 \n\tinit2\n\t(\"outer\" := bool)\n\t(\"inner\" := string)"
     -- , decoderStr = "f1 = at \n\t[\"outer\", \"inner\"] <|\n\t\toneOf [string, int]"
@@ -42,9 +40,8 @@ init =
     -- , decoderStr = "f1 o d = at [o] (\"inner\" := d)\nf2 = f1 \"outer\" string"
     -- , decoderStr = "f1 s = s := string\nf2 = \"outer\" := f1 \"inner\""
     -- , decoderStr = "f1 s = \"inner\" := s\nf2 = \"outer\" := f1 boolean"
-    -- , decoderStr = "f1 = \"array\" := (list int)"
-    , decoderStr = "func = \"array\" :=\n\t\ttuple5\n\t\t\tModel\n\t\t\tint int int int string"
-    -- , decoderStr = "func = tuple5 comb int int int int int"
+    -- , decoderStr = "f1 = \"data\" := (list int)"
+    , decoderStr = "func = \"data\" :=\n\t\ttuple5\n\t\t\tModel\n\t\t\tint int int int string"
     , result = ""
     , ast = []
     , parseSuccess = False

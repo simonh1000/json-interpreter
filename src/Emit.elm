@@ -56,7 +56,7 @@ emit env com =
                 if length vs == length coms
                     then
                         let objRep = List.indexedMap (\i com -> KV (Str (toString i)) com) coms
-                        in  iterateStructure "Tup: " objRep
+                        in  iterateStructure "Tup" objRep
                         -- (emit env <| Object <| List.indexedMap (\i com -> KV (Str (toString i)) com) coms)
                             `andThen` succeed
                     else fail <|
@@ -73,7 +73,7 @@ emit env com =
             in case List.any ( (==) Nothing) fields of
                 True -> fail "something wrong with fields"
                 False -> at (List.map (Maybe.withDefault "") fields) (emit env dec)
-        Object coms -> iterateStructure "Obj " coms
+        Object coms -> iterateStructure "Obj" coms
             -- let
             --     go : Command -> Json.Decoder String -> Json.Decoder String
             --     go com acc =
