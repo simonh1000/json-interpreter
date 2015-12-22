@@ -32,7 +32,7 @@ type Command
     | Custom Command      -- ignore the subsequent transformation
     -- | Value
 
-    | Var Name Command    -- only used in emit
+    | Var Name Command    -- only used in emit in the environment
     | Proc Name (List Param) Command
     | Call Name (List Command)    -- call procedure
 

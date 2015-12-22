@@ -17,13 +17,14 @@ content =
 
 This online tool aims to support the development of Json decoders. It implements a simple interpreter of the Json.Decode library, and calls `decodeString` with the result and the json value provided. An example is shown below - can you correct the deliberate mistake?
 
-Note that some decoders - e.g. `keyValuePairs`, `value` - make no specific requirements on the Json, and are thus not interpreted.
+The Decoders must already compile - this application is only about testing compatability with json data.
 
 A few things to note:
  - `succeed` is not polymorphic; it only supports strings and integers
  - `andThen` is not supported, which is primarily because;
- - there is no interpretation of Elm control flow syntax, e.g. `case`, `if ... then ... else`, ...; and
- - while `<|` **is supported**, `|>` is not
+ - there is no interpretation of Elm control flow syntax, e.g. `case`, `if ... then ... else`, ...;
+ - `<|` **is interpreted**, but `|>` is not
+ - some decoders - e.g. `keyValuePairs`, `value` - make no specific requirements on the Json, and are thus considered always compatible
 
 """
 

@@ -100,15 +100,20 @@ init =
         "Obj 4 5 0"
         "succeed, with object3"
     , TestSuite
+        "default = succeed True"
+        "{\"x\": 4, \"y\": 5, \"z\":\"six\"}"
+        "True"
+        "succeed Boolean"
+    , TestSuite
         "f1 s = at [\"outer\", s] string\n\ndefault = f1 \"inner\""
         "{\"outer\": {\"inner\": \"Success\"}}"
         "Success"
         "function applied to string"
     , TestSuite
-        "f1 o d = at [o] (\"inner\" := d)\ndefault = f1 \"outer\" string"
+        "default = f1  \t\"outer\" string\nf1 o d = at [o] (\"inner\" := d)\n"
         "{\"outer\": {\"inner\": \"Success\"}}"
         "Success"
-        "function application"
+        "function application with double space"
     , TestSuite
         "f s = s := float\ndefault =\n\tobject3 (,,)\n\t\t(f \"x\") (f \"y\") (f \"z\")"
         "{\"x\": 4, \"y\": 5, \"z\":5.5}"
@@ -120,10 +125,20 @@ init =
         "Obj Success"
         "<|"
     , TestSuite
-        "default = object1 (bbbb (aaaa)) <| \"inner\" := string"
+        "default = object1 (\\b -> (b ++ \"bbbb\")) <| \"inner\" := string"
         "{\"inner\": \"Success\"}"
         "Obj Success"
-        "object1 (...(...)...)"
+        "Complex transformFunc - object1 (...(...)...) ..."
+    , TestSuite
+        "f1 = \"Activity\" := tuple1 id aaaa\n\ndefault = int"
+        "5"
+        "5"
+        "\n Call function at end of proc"
+    , TestSuite
+        "f1 = \"Activity\" := tuple1 id (f1 aaa)\n\ndefault = int"
+        "5"
+        "5"
+        "\n Tuple with embedded function call "
     ]
 
 type Action
@@ -161,7 +176,11 @@ testOne m =
                 [ style
                     [ ("margin", "0") ]
                 ]
-                [ text <| if success then "" else toString ast ]
+                [ text <|
+                    if success
+                        -- then ""
+                        then toString ast
+                        else toString ast ]
             , p
                 [ style
                     [ ("margin", "0 0 10px 0") ]
@@ -169,7 +188,7 @@ testOne m =
                 [ text <| m.description ++
                     if success
                     then ""
-                    else result ++ " " ++ m.answer
+                    else ". " ++ result
                 ]
             ]
 

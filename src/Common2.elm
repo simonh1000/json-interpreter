@@ -84,71 +84,22 @@ bracketed parser =
 -- should count balanced parens
 somethingInBrackets : Parser String
 somethingInBrackets =
-    map String.fromList <| between (char '(') (char ')') (many <| noneOf [')'])
+    between (char '(') (char ')') <|
+        -- map String.fromList (many <| noneOf [')'])
+        ( (many (noneOf ['(', ')']) *> (rec <| \() -> somethingInBrackets) )
+          -- second part fails when matching a ')', causing second branch
+          -- on a '(', we get the bracketed content
+          `or`
+          map String.fromList (many <| noneOf [')'])
+        )
+        -- take until ( or ) andThen
+        --   - case of
+        --       ( -> somethingInBrackets and keep taking again
+        --       ) -> end
 
+transformFunc = word `or` somethingInBrackets
 -- LISTOF
 
 listOf : Parser a -> Parser (List a)
 listOf dec =
     (char '[') *> (many <| possibleSpacing *> dec <* possibleSpacing <* (oneOf [',', ']']))
-
---
---
--- endWord =
---     end `or`
---     (skip <| oneOf <| spacingChars ++ delimiters)
---
--- -- WORDS
--- -- word : Parser String
--- -- word =
--- --     regex "[a-zA-Z_\\d\\.\\$]+"
---
--- -- stringLiteral : Parser String
--- -- stringLiteral =
--- --     between (char '"') (char '"')
--- --         word
---
--- quotedWord : Parser String
--- quotedWord =
---     between (char '"') (char '"') word
---
--- sentence : Parser String
--- sentence =
---     map String.fromList <| between (char '"') (char '"') (many <| noneOf ['"'])
---
--- -- stringLiteral : Parser Command
--- -- stringLiteral =
--- --     quotedWord
--- --     -- between (char '"') (char '"') word
--- --     `andThen` (succeed << Str)
---
--- -- wordOrBrackets : Parser String
--- -- wordOrBrackets =
--- --     word `or`
--- --         map String.fromList (between openBrackets closeBrackets (many <| noneOf [')']))
---
--- -- used to transform output of decoder
--- -- irrelevant for this project
--- transformFunc : Parser String
--- transformFunc =
---     -- between openBrackets closeBrackets <|
---     bracketed <|
---         word <* many (spaces <* (word `or` quotedWord))
---
--- -- NEEDS more work
--- anonFunc : Parser String
--- anonFunc =
---     let
---         pre = string "(" <* possSpaces <* string "\\"
---     -- regex "\\(\\[^\\)]*\\)"
---     in
---     map String.fromList <| between pre (char ')') (many1 <| noneOf [')'])
---     -- between openBrackets closeBrackets (char '\' )
---
--- -- spaces =
--- --     skipMany1 (oneOf spaceChars)
--- --
--- -- possSpaces =
--- --     skipMany <|
--- --         oneOf spaceChars
--- --

@@ -200,7 +200,9 @@ parseResult address model =
             ]
             [ div
                 [ style
-                    [ ("display" , "flex")]
+                    [ ("display" , "flex")
+                    , ("align-items", "baseline")
+                    ]
                 ]
                 [ h3
                     [ style [("margin", "0")] ]

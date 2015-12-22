@@ -98,6 +98,11 @@ pNumber : Parser Command
 pNumber =
     int_ `andThen` (succeed << Str)
 
+pBln : Parser Command
+pBln =
+    (string "True" `or` string "False") -- Elm values
+    `andThen` (succeed << Str)
+
 -- -- V A R I A B L E
 pVar: Parser Command
 pVar =
@@ -144,7 +149,7 @@ pArr =
 pTuple : Parser Command
 pTuple =
     string "tuple" *> Num.digit
-    `andThen` \n -> spacing *> bracketed (word `or` somethingInBrackets) *> count n (spacing *> pCommand)
+    `andThen` \n -> spacing *> transformFunc *> count n (spacing *> pCommand)
     `andThen` (succeed << Tuple)
 --
 -- -- 5 KEY : VALUE
@@ -166,7 +171,7 @@ pObject : Parser Command
 pObject =
     string "object" *> Num.digit
     `andThen` \n ->
-        spacing *> (word `or` somethingInBrackets) *> count n (spacing *> bracketed (possibleSpacing *> pCommand))
+        spacing *> transformFunc *> count n (spacing *> bracketed (possibleSpacing *> pCommand))
         `andThen` (succeed << Object)
 
 -- KEY VALUE PAIRS
@@ -196,7 +201,7 @@ pOneOf =
 -- MAP
 pMap : Parser Command
 pMap =
-    string "map" *> spacing *> (word `or` somethingInBrackets) *> spacing *> pCommand
+    string "map" *> spacing *> transformFunc *> spacing *> pCommand
     -- string "map" *> spacing *> (transformFunc `or` anonFunc) *> spacing *> pCommand
     `andThen` (succeed << Map)
 --
@@ -212,8 +217,8 @@ pFail =
 -- -- ************* TOO NARROW *************************
 pSucceed : Parser Command
 pSucceed =
-    -- string "succeed" *> spacing *> (pStr `or` pVar)
-    string "succeed" *> spacing *> (pNumber `or` pStr)
+    -- string "succeed" *> spacing *> (pNumber `or` pStr)
+    string "succeed" *> spacing *> (choice [pBln, pNumber, pStr])
     `andThen` (succeed << Succeed)
 --
 -- -- 16 CUSTOM
@@ -223,23 +228,33 @@ pCustom =
     -- string "customDecoder" *> spacing *> pCommand <* spacing <* pVar
     string "customDecoder" *> spacing *>
         -- pCommand <* spacing <* bracketed (skip (many1 pVar) `or` skip anonFunc)
-        pCommand <* spacing <* (word `or` somethingInBrackets)
+        pCommand <* spacing <* transformFunc
     `andThen` \dec -> succeed (Custom dec)
---
--- -- CALL
--- -- either fnc or (fnc p1 ...)
+
+-- CALL
+{-
+tuple1 id f1
+tuple1 id (f2 "string")
+tuple1 id (f2 [something in scope])
+tuple1 id (f2 primitive)
+
+but .... := f2 [something] does not need brackets
+
+*** use of char ' ' below may create edge cases
+-}
+
 pCall : Parser Command
 pCall =
     -- (word `andThen` \proc -> succeed <| Call proc [])
-    -- `or` pCallWithParams
+    -- `or` (rec <| \() -> pCallWithParams)
     word
-    `andThen` \proc -> many (spacing *> (pStr `or` pCommand))
+    -- `andThen` \proc -> many (spacing *> (pStr `or` pCommand))
+    `andThen` \proc -> many (many1 (oneOf [' ', '\t']) *> (pStr `or` pCommand))
     `andThen` \args -> succeed <| Call proc args
---
--- -- pCallWithParams =
--- --     let pCWP =
--- --         word
--- --         `andThen` \proc -> many1 (spaces *> (pStr `or` pCommand))
--- --         `andThen` \args -> succeed <| Call proc args
--- --     in between openBrackets closeBrackets *> pCWP
---
+
+pCallWithParams : Parser Command
+pCallWithParams =
+    between openBrackets closeBrackets <|
+        (word
+        `andThen` \proc -> many1 (spacing *> (pStr `or` pCommand))
+        `andThen` \args -> succeed <| Call proc args)
