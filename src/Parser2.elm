@@ -151,9 +151,9 @@ pTuple =
     string "tuple" *> Num.digit
     `andThen` \n -> spacing *> transformFunc *> count n (spacing *> pCommand)
     `andThen` (succeed << Tuple)
---
--- -- 5 KEY : VALUE
--- -- does not capture when k is a function applied to something
+
+-- 5 KEY : VALUE
+-- does not capture when k is a function applied to something
 pKV : Parser Command
 pKV =
     map KV ( (pStr `or` pVar) <* between spacing spacing (string ":="))

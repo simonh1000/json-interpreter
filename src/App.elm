@@ -149,7 +149,10 @@ navbar m =
                 ]
             ]
             [ text <| if not m then "Elm Json.Decode interpreter" else "" ]
-        , p []
+        , p
+            [ style
+                [ ("margin", "0") ]
+            ]
             [ text "Simon Hampton ("
             , a
                 [ href "https://github.com/simonh1000/json-interpreter"
@@ -219,7 +222,7 @@ parseResult address model =
     else
         div
             [ if model.errorMessage /= ""
-                then footerStyles "red"
+                then footerStyles elmRed
                 else footerStyles "#f0ad00"
             ]
             [ p [] [ text model.errorMessage ]
@@ -243,7 +246,7 @@ decodeResult model =
         then elmGreen
         else if model.result == ""
             then elmOrange
-            else "red"
+            else elmRed
     in
         div
             [ footerStyles col
@@ -270,6 +273,7 @@ elmGreen = "#7fd13b"
 elmGrey = "#293C4B"   -- "rgb(41, 60, 75)"
 elmPale = "#f7f7f7"
 elmOrange = "#f0ad00"
+elmRed = "#FF1965"
 
 navbarStyles =
     style

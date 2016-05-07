@@ -20,7 +20,7 @@ This online tool aims to support the development of Json decoders. It implements
 The Decoders must already compile - this application is only about testing compatability with json data.
 
 A few things to note:
- - `succeed` is not polymorphic; it only supports strings and integers
+ - `succeed` is not fully polymorphic;
  - `andThen` is not supported, which is primarily because;
  - there is no interpretation of Elm control flow syntax, e.g. `case`, `if ... then ... else`, ...;
  - `<|` **is interpreted**, but `|>` is not
