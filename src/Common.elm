@@ -1,4 +1,4 @@
-module Common2 (..) where
+module Common exposing (..)
 {-| Need to capture
 words:
     - primitives,

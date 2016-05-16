@@ -1,4 +1,4 @@
-module Overlay (Action(..), view, elmBlue) where
+module Overlay exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -7,12 +7,21 @@ import Markdown
 
 elmBlue = "#60B5CC"
 
-type Action
+type alias Model = Bool
+
+init = True
+
+update : Msg -> Model -> Model
+update msg model =
+    case msg of
+        Close -> False
+
+type Msg
     = Close
 
-content : Html
+content : Html Msg
 content =
-    Markdown.toHtml """
+    Markdown.toHtml [] """
 # Elm Json.Decode interpreter
 
 This online tool aims to support the development of Json decoders. It implements a simple interpreter of the Json.Decode library, and calls `decodeString` with the result and the json value provided. An example is shown below - can you correct the deliberate mistake?
@@ -28,7 +37,8 @@ A few things to note:
 
 """
 
-view address m =
+view : Model -> Html Msg
+view m =
     div
         [ style <| if m then overlayOpen else overlayClosed ]
         [ content
@@ -38,8 +48,7 @@ view address m =
                 ]
             ]
             [ button
-                [ onClick address Close
-                ]
+                [ onClick Close ]
                 [ text "Close" ]
             ]
         ]

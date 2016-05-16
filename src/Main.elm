@@ -1,23 +1,17 @@
-module Main (main) where
+module Main exposing (main)
 
-import StartApp
-import Effects exposing (Effects)
+import Html.App as Html
+import Platform.Cmd exposing (Cmd)
 import Task
+import Time
 
-import App exposing (Action(..), init, update, view)
--- import Testing exposing (Action(..), init, update, view)
-
-app =
-    StartApp.start
-        { init = (init, Effects.tick Tick)
-        , update = update
-        , view = view
-        , inputs = []
-        }
+import App exposing (Msg(..), init, update, view)
+-- import Testing exposing (Msg(..), init, update, view)
 
 main =
-    app.html
-
-port tasks : Signal (Task.Task Effects.Never ())
-port tasks =
-    app.tasks
+    Html.program
+        { init = (init, Task.perform Tick Tick Time.now)
+        , update = update
+        , view = view
+        , subscriptions = \_ -> Sub.none
+        }

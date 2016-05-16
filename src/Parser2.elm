@@ -1,4 +1,4 @@
-module Parser2 (..) where
+module Parser2 exposing (..)
 
 import Combine as C exposing (..)
 import Combine.Char exposing (..)
@@ -7,7 +7,7 @@ import Combine.Infix exposing (..)
 import String
 import Result exposing (Result)
 
-import Common2 exposing (..)
+import Common exposing (..)
 import AST exposing (Command(..))
 
 parseString : String -> Result.Result String (List Command)
@@ -17,9 +17,9 @@ parseString s =
             *> (choice [oneOrMoreProcs, singleItem, empty])
             -- *> (choice [oneOrMoreProcs, singleItem])
             <* possibleSpacing <* end) s of
-        (Done lst, cntx) ->
+        (Result.Ok lst, cntx) ->
             Result.Ok lst
-        (Fail errs, cntx) ->
+        (Result.Err errs, cntx) ->
             Result.Err (toString errs ++ "Parsing error beginning at: " ++ toString cntx)  -- cntx.input
 
 oneOrMoreProcs : Parser (List Command)

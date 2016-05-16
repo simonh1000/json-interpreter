@@ -1,16 +1,19 @@
-module Testing (..) where
+module Testing exposing (..)
 
 import Html exposing (Html, h1, h2, h3, text, div, a, header, footer, p, button, textarea, span)
+import Html.App as Html
 import Html.Attributes as Attr exposing (type', id, style, multiple, href)
-import Html.Events exposing (onClick, on, onSubmit, onWithOptions, targetValue)
+-- import Html.Events exposing (onClick, on, onSubmit, onWithOptions, targetValue)
 
-import Effects exposing (Effects)
+import Platform.Cmd exposing (Cmd)
 import Time exposing (Time)
 
 import AST exposing (..)
 import Parser2 exposing (parseString)
 import Emit exposing (emit)
 import Json.Decode as Json
+
+import ElmTest exposing (..)
 
 type alias TestSuite =
     { decodeStr : String
@@ -22,7 +25,7 @@ type alias TestSuite =
 type alias Model = List TestSuite
 
 init =
-    [ TestSuite "" "" "Unexpected end of input" "Empty string"
+    [ TestSuite "" "" "Given an invalid JSON: Unexpected end of JSON input" "Empty string"
     , TestSuite "int" "6" "6" "Integer 6"
     , TestSuite
         "default = list int"
@@ -141,22 +144,51 @@ init =
         "\n Tuple with embedded function call "
     ]
 
-type Action
-    = Tick Time
+type Msg
+    = NoOp
+    -- | Tick Time
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-    case action of
-        Tick _ ->
-            (model, Effects.none)
-        -- otherwise -> (model, Effects.none)
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+    (model, Cmd.none)
+    -- case msg of
+    --     Tick _ ->
+    --         (model, Cmd.none)
+        -- otherwise -> (model, Cmd.none)
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
     div [] <|
-        List.map testOne model
+        -- List.map testOne model
+        List.map viewAssertion model
 
+tester : TestSuite -> Test
+tester m =
+    let
+        ast =
+            case parseString m.decodeStr of
+                Result.Ok s -> s
+                Result.Err err -> [ Error err ]
+        result =
+            case Json.decodeString (emit ast (Call "default" [])) m.jsonStr of
+                Result.Ok s -> s
+                Result.Err err -> err
+    in
+    test
+      m.description
+      (assertEqual result m.answer)
+
+viewAssertion : TestSuite -> Html Msg
+viewAssertion t =
+    div []
+        [ text t.description
+        , text ": "
+        , t
+            |> tester
+            |> stringRunner
+            |> text
+        ]
 
 testOne m =
     let
@@ -197,3 +229,12 @@ answerStyles b =
         [ ("color", if b then "green" else "red")
         , ("padding", "0 15px")
         ]
+
+-- MAIN
+main =
+    Html.program
+        { init = (init, Cmd.none)
+        , update = update
+        , view = view
+        , subscriptions = \_ -> Sub.none
+        }

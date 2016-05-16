@@ -1,10 +1,11 @@
-module App (Model, Action(Tick), init, update, view) where
+module App exposing (Model, Msg(Tick), init, update, view)
 
 import Html exposing (Html, h1, h2, h3, text, div, a, header, footer, p, button, textarea, span)
+import Html.App exposing (map)
 import Html.Attributes as Attr exposing (type', id, style, multiple, href)
-import Html.Events exposing (onClick, on, onSubmit, onWithOptions, targetValue)
+import Html.Events exposing (onClick, onInput)
 
-import Effects exposing (Effects)
+import Platform.Cmd exposing (Cmd)
 import Time exposing (Time)
 import String
 import Json.Decode as Json
@@ -24,7 +25,7 @@ type alias Model =
     , result : String
     , errorMessage: String
     , decodeSuccess : Bool
-    , overlay : Bool
+    , overlay : Overlay.Model
     }
 
 init =
@@ -47,19 +48,19 @@ init =
     , parseSuccess = False
     , errorMessage = ""
     , decodeSuccess = False
-    , overlay = True
+    , overlay = Overlay.init
     }
 
 -- UPDATE
 
-type Action
+type Msg
     = JsonChange String
     | Decoder String
     | ChooseDecoder String
     | Tick Time
-    | OverlayAction Overlay.Action
+    | OverlayMsg Overlay.Msg
 
-update : Action -> Model -> (Model, Effects Action)
+update : Msg -> Model -> (Model, Cmd Msg)
 update action model =
     let
         parse str =
@@ -70,6 +71,7 @@ update action model =
                 , result = ""
                 }
             in
+            -- newModel
             case parseString str of
                 Result.Ok ast ->
                     { newModel
@@ -86,15 +88,15 @@ update action model =
     case action of
         Tick _ ->
             ( parse model.decoderStr
-            , Effects.none
+            , Cmd.none
             )
         JsonChange j ->
             ( { model | json = j }
-            , Effects.none
+            , Cmd.none
             )
         Decoder d ->
             ( parse d
-            , Effects.none
+            , Cmd.none
             )
         ChooseDecoder name ->
             let newModel =
@@ -111,29 +113,35 @@ update action model =
                         | decodeSuccess = False
                         , result = e
                         }
-            in ( newModel , Effects.none )
-        OverlayAction _ -> ( { model | overlay = False }, Effects.none )
+            in ( newModel , Cmd.none )
+        OverlayMsg msg ->
+            ( { model | overlay = Overlay.update msg model.overlay }
+            , Cmd.none
+            )
 
 -- VIEW
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
     div
         [ style
             [ ("display", "flex")
             , ("flex-direction", "column")
-            , ("height", "100%")
+            -- , ("height", "100%")
+            , ("width", "100vw")
+            , ("minHeight", "100vh")
             ]
         ]
         [ navbar model.overlay
-        , Overlay.view (Signal.forwardTo address OverlayAction) model.overlay
-        , mainSection address model
+        , Overlay.view model.overlay
+            |> map OverlayMsg
+        , mainSection model
         , footer
             [ style
                 [ ( "display", "flex")
                 ]
             ]
-            [ parseResult address model
+            [ parseResult model
             , decodeResult model
             ]
         ]
@@ -156,7 +164,8 @@ navbar m =
             [ text "Simon Hampton ("
             , a
                 [ href "https://github.com/simonh1000/json-interpreter"
-                , style [ ("color", "inherit")]]
+                , style [ ("color", "inherit") ]
+                ]
                 [ text "Source: github" ]
             , text ")"
             ]
@@ -164,7 +173,8 @@ navbar m =
 
 -- M A I N   S E C T I O N
 
-mainSection address model =
+mainSection : Model -> Html Msg
+mainSection model =
     div
         [ style
             [ ( "display", "flex")
@@ -178,7 +188,8 @@ mainSection address model =
                 [ text "Json.Decode functions" ]
             , textarea
                 [ textareaStyles "#f7f7f7"
-                , onchange address Decoder
+                -- , onchange Decoder
+                , onInput Decoder
                 ]
                 [ text model.decoderStr ]
             ]
@@ -189,13 +200,14 @@ mainSection address model =
                 [ text "Json" ]
             , textarea
                 [ textareaStyles "#3a3432"
-                , onchange address JsonChange
+                -- , onchange address JsonChange
+                , onInput JsonChange
                 ]
                 [ text model.json ]
                 ]
         ]
 
-parseResult address model =
+parseResult model =
     if model.parseSuccess
     then
         div
@@ -212,7 +224,7 @@ parseResult address model =
                     [ text "Choose entry point"
                     ]
                 , div []
-                    (List.map (decoderButton address) model.ast)
+                    (List.map decoderButton model.ast)
                 ]
             , div
                 [ style [("font-size", "10px")]
@@ -228,14 +240,14 @@ parseResult address model =
             [ p [] [ text model.errorMessage ]
             ]
 
-decoderButton address func =
+decoderButton func =
     let n =
         case func of
             Proc name _ _ -> name
             otherwise -> "!!!!!"
     in
         span
-            [ onClick address (ChooseDecoder n)
+            [ onClick (ChooseDecoder n)
             , fakeButton
             ]
             [ text n ]
@@ -258,7 +270,6 @@ decodeResult model =
                 ]
                 [ text model.result ]
             ]
-
 
 escapeText str =
     String.fromList <|
@@ -342,6 +353,6 @@ fakeButton =
         , ("border-radius", "5px")
         ]
 
--- on (String -> Json.Decode.Decoder a -> a -> Signal.Message) -> Attribute
-onchange address action =
-    on "input" targetValue (\v -> Signal.message address (action v))
+-- on : String -> Decoder msg -> Attribute msg
+-- onchange address action =
+--     on "input" (Json.map action targetValue)
